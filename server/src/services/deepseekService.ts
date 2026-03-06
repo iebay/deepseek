@@ -80,7 +80,7 @@ export async function streamChat(
 
   const client = new OpenAI({
     apiKey,
-    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
+    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
   });
 
   const systemContent = [

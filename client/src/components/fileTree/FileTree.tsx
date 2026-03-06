@@ -3,6 +3,7 @@ import { ChevronRight, ChevronDown, FileCode, Folder, FolderOpen, Search, Chevro
 import { useAppStore } from '../../store/appStore';
 import { fetchFileContent } from '../../api/filesApi';
 import type { FileNode } from '../../types';
+import { FileTreeSkeleton } from '../ui/Skeleton';
 
 const EXT_COLORS: Record<string, string> = {
   '.tsx': '#61dafb', '.ts': '#3178c6', '.jsx': '#61dafb', '.js': '#f7df1e',
@@ -159,6 +160,9 @@ export default function FileTree() {
   }
 
   if (!fileTree) {
+    if (currentProject) {
+      return <FileTreeSkeleton />;
+    }
     return (
       <div className="p-4 text-xs text-[#6e7681] flex flex-col items-center gap-2 mt-8">
         <Folder size={32} className="text-[#30363d]" />

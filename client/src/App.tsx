@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProjectSelector from './components/home/ProjectSelector';
 import TopBar from './components/layout/TopBar';
@@ -8,7 +8,11 @@ import ChatPanel from './components/chat/ChatPanel';
 import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
 import Toast from './components/ui/Toast';
+import OfflineIndicator from './components/ui/OfflineIndicator';
+import CommandPalette from './components/ui/CommandPalette';
+import Terminal from './components/terminal/Terminal';
 import { useAppStore } from './store/appStore';
+import { useIsMobile } from './hooks/useMediaQuery';
 
 function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number) => void; className?: string }) {
   const dragging = useRef(false);
@@ -52,12 +56,15 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
 function EditorLayout() {
   const {
-    showPreview, showSidebar, showAIPanel, showGitPanel,
+    showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
     openTabs, activeTabPath,
   } = useAppStore();
+
+  const isMobile = useIsMobile();
+  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -65,6 +72,10 @@ function EditorLayout() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
         toggleSidebar();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+        e.preventDefault();
+        setCmdPaletteOpen(true);
       }
     };
     window.addEventListener('keydown', handler);
@@ -81,82 +92,112 @@ function EditorLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-[#0d1117] text-[#e6edf3]">
-      <TopBar />
+      <OfflineIndicator />
+      <TopBar onOpenCommandPalette={() => setCmdPaletteOpen(true)} />
       <div className="flex flex-1 overflow-hidden">
         {/* Left: File Tree */}
         {showSidebar && (
           <>
             <aside
-              className="shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200"
-              style={{ width: sidebarWidth }}
+              className={`shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200 ${
+                isMobile ? 'fixed inset-y-0 left-0 z-40 top-[88px]' : ''
+              }`}
+              style={{ width: isMobile ? Math.min(sidebarWidth, window.innerWidth * 0.8) : sidebarWidth }}
             >
               <FileTree />
             </aside>
-            <ResizeDivider onResize={handleSidebarResize} />
+            {isMobile && (
+              <div
+                className="fixed inset-0 z-30 bg-black/50 top-[88px]"
+                onClick={toggleSidebar}
+              />
+            )}
+            {!isMobile && <ResizeDivider onResize={handleSidebarResize} />}
           </>
         )}
 
-        {/* Center: Code Editor */}
-        <main className="flex-1 overflow-hidden min-w-0">
-          <CodeEditor />
-        </main>
+        {/* Center + right panels */}
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          <div className="flex flex-1 overflow-hidden">
+            {/* Center: Code Editor */}
+            <main className="flex-1 overflow-hidden min-w-0">
+              <CodeEditor />
+            </main>
 
-        {/* Center-right: Preview (optional) */}
-        {showPreview && (
-          <>
-            <ResizeDivider onResize={(d) => setSidebarWidth(Math.max(160, sidebarWidth + d))} />
-            <div className="w-[38%] shrink-0 border-l border-[#30363d] overflow-hidden">
-              {(() => {
-                const activeTab = openTabs.find((t) => t.path === activeTabPath);
-                const isHtml = activeTab?.path?.match(/\.html?$/i);
-                return (
-                  <LivePreview
-                    srcDoc={isHtml ? activeTab?.content : undefined}
+            {/* Center-right: Preview (optional, hidden on mobile) */}
+            {showPreview && !isMobile && (
+              <>
+                <ResizeDivider onResize={(d) => setSidebarWidth(Math.max(160, sidebarWidth + d))} />
+                <div className="w-[38%] shrink-0 border-l border-[#30363d] overflow-hidden">
+                  {(() => {
+                    const activeTab = openTabs.find((t) => t.path === activeTabPath);
+                    const isHtml = activeTab?.path?.match(/\.html?$/i);
+                    return (
+                      <LivePreview
+                        srcDoc={isHtml ? activeTab?.content : undefined}
+                      />
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {/* Right: Chat Panel */}
+            {showAIPanel && (
+              <>
+                {!isMobile && <ResizeDivider onResize={handleAIPanelResize} />}
+                <aside
+                  className={`shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200 ${
+                    isMobile ? 'fixed inset-0 z-40 top-[88px] w-full' : ''
+                  }`}
+                  style={isMobile ? undefined : { width: aiPanelWidth }}
+                >
+                  <ChatPanel />
+                </aside>
+                {isMobile && (
+                  <div
+                    className="fixed inset-0 z-30 bg-black/50 top-[88px]"
+                    onClick={toggleAIPanel}
                   />
-                );
-              })()}
+                )}
+              </>
+            )}
+
+            {/* Right: Git Panel */}
+            {showGitPanel && !isMobile && (
+              <>
+                <ResizeDivider onResize={handleAIPanelResize} />
+                <aside
+                  className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
+                  style={{ width: aiPanelWidth }}
+                >
+                  <GitPanel />
+                </aside>
+              </>
+            )}
+
+            {/* Collapsed panel toggles */}
+            {!showAIPanel && !isMobile && (
+              <button
+                onClick={toggleAIPanel}
+                className="w-6 shrink-0 border-l border-[#30363d] bg-[#161b22] hover:bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] transition-colors"
+                title="展开 AI 面板"
+              >
+                <span className="text-[10px] rotate-90 whitespace-nowrap">AI</span>
+              </button>
+            )}
+          </div>
+
+          {/* Bottom: Terminal */}
+          {showTerminal && (
+            <div className="h-48 shrink-0 border-t border-[#30363d] overflow-hidden">
+              <Terminal />
             </div>
-          </>
-        )}
-
-        {/* Right: Chat Panel */}
-        {showAIPanel && (
-          <>
-            <ResizeDivider onResize={handleAIPanelResize} />
-            <aside
-              className="shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200"
-              style={{ width: aiPanelWidth }}
-            >
-              <ChatPanel />
-            </aside>
-          </>
-        )}
-
-        {/* Right: Git Panel */}
-        {showGitPanel && (
-          <>
-            <ResizeDivider onResize={handleAIPanelResize} />
-            <aside
-              className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
-              style={{ width: aiPanelWidth }}
-            >
-              <GitPanel />
-            </aside>
-          </>
-        )}
-
-        {/* Collapsed panel toggles */}
-        {!showAIPanel && (
-          <button
-            onClick={toggleAIPanel}
-            className="w-6 shrink-0 border-l border-[#30363d] bg-[#161b22] hover:bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] transition-colors"
-            title="展开 AI 面板"
-          >
-            <span className="text-[10px] rotate-90 whitespace-nowrap">AI</span>
-          </button>
-        )}
+          )}
+        </div>
       </div>
       <Toast />
+      <CommandPalette open={cmdPaletteOpen} onClose={() => setCmdPaletteOpen(false)} />
     </div>
   );
 }

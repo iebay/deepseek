@@ -1,12 +1,14 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
 import filesRouter from './routes/files';
 import aiRouter from './routes/ai';
 import templatesRouter from './routes/templates';
 import gitRouter from './routes/git';
 import memoryRouter from './routes/memory';
 import { analyzeProject } from './services/projectAnalyzer';
+import { setupTerminalWebSocket } from './routes/terminal';
 
 const app = express();
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
@@ -32,7 +34,10 @@ app.post('/api/project/analyze', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = createServer(app);
+setupTerminalWebSocket(server);
+
+server.listen(PORT, () => {
   console.log(`DeepSeek server running on http://localhost:${PORT}`);
 });
 

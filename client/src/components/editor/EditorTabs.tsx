@@ -9,9 +9,11 @@ interface ContextMenu {
 }
 
 export default function EditorTabs() {
-  const { openTabs, activeTabPath, setActiveTab, closeTab, closeOtherTabs, closeAllTabs, showToast } = useAppStore();
+  const { openTabs, activeTabPath, setActiveTab, closeTab, closeOtherTabs, closeAllTabs, reorderTabs, showToast } = useAppStore();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const dragIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -29,6 +31,32 @@ export default function EditorTabs() {
     setContextMenu({ x: e.clientX, y: e.clientY, path });
   }
 
+  function handleDragStart(e: React.DragEvent, index: number) {
+    dragIndexRef.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  }
+
+  function handleDrop(e: React.DragEvent, toIndex: number) {
+    e.preventDefault();
+    const fromIndex = dragIndexRef.current;
+    if (fromIndex !== null && fromIndex !== toIndex) {
+      reorderTabs(fromIndex, toIndex);
+    }
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+  }
+
+  function handleDragEnd() {
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+  }
+
   if (openTabs.length === 0) {
     return (
       <div className="h-9 bg-[#0d1117] border-b border-[#30363d] flex items-center px-4 shrink-0">
@@ -40,14 +68,19 @@ export default function EditorTabs() {
   return (
     <>
       <div className="h-9 bg-[#0d1117] border-b border-[#30363d] flex items-center overflow-x-auto shrink-0 scrollbar-thin">
-        {openTabs.map(tab => (
+        {openTabs.map((tab, index) => (
           <div
             key={tab.path}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
             className={`flex items-center gap-1.5 px-3 h-full border-r border-[#30363d] cursor-pointer text-xs shrink-0 group transition-colors select-none ${
               tab.path === activeTabPath
                 ? 'bg-[#1e1e1e] text-[#e6edf3] border-t-2 border-t-[#388bfd]'
                 : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22]'
-            }`}
+            } ${dragOverIndex === index && dragIndexRef.current !== index ? 'border-l-2 border-l-[#388bfd]' : ''}`}
             onClick={() => setActiveTab(tab.path)}
             onContextMenu={(e) => handleContextMenu(e, tab.path)}
           >
