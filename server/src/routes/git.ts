@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { spawnSync } from 'child_process';
 import { getAllowedRoots, isPathSafe } from '../utils/pathUtils';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -13,12 +17,12 @@ interface SpawnResult {
   status: number | null;
 }
 
-function runGit(args: string[], cwd: string, timeout = 15000): SpawnResult {
+function runGit(args: string[], cwd: string, timeout = 15000, env?: NodeJS.ProcessEnv): SpawnResult {
   const result = spawnSync('git', args, {
     cwd,
     timeout,
     encoding: 'utf8',
-    env: { ...process.env },
+    env: env ?? { ...process.env },
   });
   return {
     stdout: (result.stdout ?? '').toString().trim(),
@@ -27,8 +31,8 @@ function runGit(args: string[], cwd: string, timeout = 15000): SpawnResult {
   };
 }
 
-function gitOk(args: string[], cwd: string, timeout = 15000): string {
-  const r = runGit(args, cwd, timeout);
+function gitOk(args: string[], cwd: string, timeout = 15000, env?: NodeJS.ProcessEnv): string {
+  const r = runGit(args, cwd, timeout, env);
   if (r.status !== 0) {
     throw new Error(r.stderr || r.stdout || `git ${args[0]} failed`);
   }
@@ -178,21 +182,22 @@ router.post('/push', (req: Request, res: Response) => {
       currentBranch = gitOk(['branch', '--show-current'], validRoot);
     }
 
-    // Inject token into remote URL via environment-based credential helper
-    const env: NodeJS.ProcessEnv = { ...process.env };
+    // Inject token via GIT_ASKPASS to avoid exposing it in process arguments.
+    // The token is passed via an env var (GIT_TOKEN) so the script never
+    // contains the token value, preventing shell injection attacks.
     if (githubToken) {
+      let askpassScript: string | null = null;
       try {
         const remoteUrl = gitOk(['remote', 'get-url', remote], validRoot);
-        // Build a token-authenticated URL (token URL-encoded)
-        const encodedToken = encodeURIComponent(githubToken);
-        const tokenUrl = remoteUrl.replace(
-          /^https:\/\/(?:[^@]*@)?(github\.com)/,
-          `https://${encodedToken}@$1`
-        );
-        // Temporarily set the remote URL for this push only using a credential env
-        env['GIT_ASKPASS'] = 'echo';
-        // Use the token URL directly as the push target instead of mutating remote config
-        const pushResult = runGit(['push', tokenUrl, currentBranch], validRoot, 60000);
+        askpassScript = path.join(os.tmpdir(), `git-askpass-${crypto.randomBytes(8).toString('hex')}.sh`);
+        fs.writeFileSync(askpassScript, '#!/bin/sh\necho "$GIT_TOKEN"\n', { mode: 0o700 });
+        const pushEnv: NodeJS.ProcessEnv = {
+          ...process.env,
+          GIT_ASKPASS: askpassScript,
+          GIT_TOKEN: githubToken,
+          GIT_TERMINAL_PROMPT: '0',
+        };
+        const pushResult = runGit(['push', remoteUrl, currentBranch], validRoot, 60000, pushEnv);
         if (pushResult.status !== 0) {
           throw new Error(pushResult.stderr || pushResult.stdout || 'Push failed');
         }
@@ -200,6 +205,10 @@ router.post('/push', (req: Request, res: Response) => {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Push failed';
         return res.status(500).json({ error: msg });
+      } finally {
+        if (askpassScript) {
+          try { fs.unlinkSync(askpassScript); } catch { /* ignore */ }
+        }
       }
     }
 
@@ -267,6 +276,59 @@ router.post('/config-token', (req: Request, res: Response) => {
 
   githubToken = token;
   res.json({ success: true });
+});
+
+// POST /api/git/clone
+router.post('/clone', (req: Request, res: Response) => {
+  const { url, targetDir } = req.body as { url: string; targetDir: string };
+
+  if (!url) {
+    return res.status(400).json({ error: 'url is required' });
+  }
+  if (!targetDir) {
+    return res.status(400).json({ error: 'targetDir is required' });
+  }
+
+  // Validate URL: must be https:// or git@ URL
+  if (!/^(https?:\/\/|git@)/.test(url)) {
+    return res.status(400).json({ error: 'url must be a valid https or git remote URL' });
+  }
+
+  if (!isPathSafe(targetDir, getAllowedRoots())) {
+    return res.status(403).json({ error: 'Access denied: targetDir is outside allowed directories' });
+  }
+
+  try {
+    const cloneUrl = url;
+    let askpassScript: string | null = null;
+
+    // Ensure parent directory exists before cloning
+    const parentDir = path.dirname(targetDir);
+    fs.mkdirSync(parentDir, { recursive: true });
+
+    if (githubToken && /^https?:\/\//.test(url)) {
+      // Token is passed via env var, not embedded in the script, to prevent injection
+      askpassScript = path.join(os.tmpdir(), `git-askpass-${crypto.randomBytes(8).toString('hex')}.sh`);
+      fs.writeFileSync(askpassScript, '#!/bin/sh\necho "$GIT_TOKEN"\n', { mode: 0o700 });
+    }
+
+    try {
+      const cloneEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: '0',
+        ...(askpassScript ? { GIT_ASKPASS: askpassScript, GIT_TOKEN: githubToken ?? '' } : {}),
+      };
+      gitOk(['clone', cloneUrl, targetDir], parentDir, 120000, cloneEnv);
+      res.json({ success: true, path: targetDir });
+    } finally {
+      if (askpassScript) {
+        try { fs.unlinkSync(askpassScript); } catch { /* ignore */ }
+      }
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Clone failed';
+    res.status(500).json({ error: msg });
+  }
 });
 
 export default router;

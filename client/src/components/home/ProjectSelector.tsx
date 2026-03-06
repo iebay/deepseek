@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FolderOpen, Loader2, AlertCircle, Clock, Code2, Cpu, ChevronRight, Github, Plus, Trash2, Sparkles, Zap, GitBranch, Layers } from 'lucide-react';
+import { FolderOpen, Loader2, AlertCircle, Clock, Code2, Cpu, ChevronRight, Github, Plus, Trash2, Sparkles, Zap, GitBranch, Layers, Download } from 'lucide-react';
 import { fetchFileTree } from '../../api/filesApi';
 import { analyzeProject } from '../../api/aiApi';
 import { fetchTemplates } from '../../api/templateApi';
+import { cloneRepo } from '../../api/gitApi';
 import { useAppStore } from '../../store/appStore';
 import { useNavigate } from 'react-router-dom';
 import type { Template } from '../../types';
@@ -63,7 +64,7 @@ const features = [
 ];
 
 export default function ProjectSelector() {
-  const [tab, setTab] = useState<'open' | 'new'>('open');
+  const [tab, setTab] = useState<'open' | 'clone' | 'new'>('open');
   const [path, setPath] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +73,8 @@ export default function ProjectSelector() {
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [cloneUrl, setCloneUrl] = useState('');
+  const [cloneTarget, setCloneTarget] = useState('');
   const { setFileTree, setCurrentProject } = useAppStore();
   const navigate = useNavigate();
 
@@ -88,6 +91,30 @@ export default function ProjectSelector() {
         .finally(() => setTemplatesLoading(false));
     }
   }, [tab, templates.length]);
+
+  async function handleClone() {
+    const url = cloneUrl.trim();
+    const target = cloneTarget.trim();
+    if (!url) { setError('请输入 GitHub 仓库 URL'); return; }
+    if (!target) { setError('请输入克隆目标路径'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const result = await cloneRepo(url, target);
+      const [tree, info] = await Promise.all([
+        fetchFileTree(result.path),
+        analyzeProject(result.path),
+      ]);
+      setFileTree(tree);
+      setCurrentProject(info);
+      addRecentProject(result.path);
+      navigate('/editor');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '克隆失败');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleOpen(projectPath?: string) {
     const target = (projectPath || path).trim();
@@ -171,7 +198,7 @@ export default function ProjectSelector() {
         {/* Tab switcher */}
         <div className="flex gap-1 bg-[#161b22] border border-[#30363d] rounded-xl p-1 mb-4">
           <button
-            onClick={() => setTab('open')}
+            onClick={() => { setTab('open'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'open'
                 ? 'bg-[#388bfd] text-white shadow-lg shadow-[#388bfd]/20'
@@ -182,7 +209,18 @@ export default function ProjectSelector() {
             打开项目
           </button>
           <button
-            onClick={() => setTab('new')}
+            onClick={() => { setTab('clone'); setError(''); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              tab === 'clone'
+                ? 'bg-[#388bfd] text-white shadow-lg shadow-[#388bfd]/20'
+                : 'text-[#8b949e] hover:text-[#e6edf3]'
+            }`}
+          >
+            <Download size={15} />
+            克隆仓库
+          </button>
+          <button
+            onClick={() => { setTab('new'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'new'
                 ? 'bg-[#388bfd] text-white shadow-lg shadow-[#388bfd]/20'
@@ -270,6 +308,41 @@ export default function ProjectSelector() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        ) : tab === 'clone' ? (
+          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-xl space-y-3">
+            <p className="text-xs text-[#8b949e] px-1">从 GitHub 克隆仓库到本地目录</p>
+            <input
+              type="text"
+              value={cloneUrl}
+              onChange={(e) => setCloneUrl(e.target.value)}
+              placeholder="仓库 URL，例如: https://github.com/user/repo.git"
+              className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={cloneTarget}
+                onChange={(e) => setCloneTarget(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleClone()}
+                placeholder="克隆目标路径，例如: /home/user/my-project"
+                className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              />
+              <button
+                onClick={handleClone}
+                disabled={loading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                克隆
+              </button>
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-lg px-3 py-2">
+                <AlertCircle size={14} />
+                {error}
               </div>
             )}
           </div>
