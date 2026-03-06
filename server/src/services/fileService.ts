@@ -82,3 +82,5 @@ export function backupFile(filePath: string): string {
 export function restoreBackup(backupPath: string, originalPath: string): void {
   fs.copyFileSync(backupPath, originalPath);
 }
+
+export { getFileTree as buildFileTree };
