@@ -67,6 +67,9 @@ router.post('/batch-write', (req: Request, res: Response) => {
     const results: { path: string; backupPath: string }[] = [];
     for (const f of files) {
       const absPath = path.isAbsolute(f.path) ? f.path : path.join(projectRoot, f.path);
+      if (!isPathSafe(absPath, allowedRoots)) {
+        return res.status(403).json({ error: `Access denied: ${f.path} is outside allowed directories` });
+      }
       const backupPath = backupFile(absPath);
       writeFile(absPath, f.content);
       results.push({ path: absPath, backupPath });

@@ -87,3 +87,16 @@ export function writePersonality(projectRoot: string, content: string): void {
   if (!fs.existsSync(memDir)) fs.mkdirSync(memDir, { recursive: true });
   fs.writeFileSync(path.join(memDir, 'personality.md'), content, 'utf-8');
 }
+
+/** 读取 context.md 内容 */
+export function readContext(projectRoot: string): string {
+  const fp = path.join(projectRoot, MEMORY_DIR, 'context.md');
+  return fs.existsSync(fp) ? fs.readFileSync(fp, 'utf-8') : '';
+}
+
+/** 保存 context.md 内容（覆盖写入） */
+export function writeContext(projectRoot: string, content: string): void {
+  const memDir = path.join(projectRoot, MEMORY_DIR);
+  if (!fs.existsSync(memDir)) fs.mkdirSync(memDir, { recursive: true });
+  fs.writeFileSync(path.join(memDir, 'context.md'), content, 'utf-8');
+}

@@ -18,7 +18,8 @@ export async function fetchFileContent(filePath: string): Promise<string> {
     throw new Error(err.error || '读取文件失败');
   }
   const data = await res.json();
-  return data.content as string;
+  if (typeof data.content !== 'string') throw new Error('Invalid response: content is not a string');
+  return data.content;
 }
 
 export function getRawFileUrl(filePath: string): string {
@@ -51,6 +52,7 @@ export async function batchWriteFiles(
     throw new Error(err.error || '批量写入失败');
   }
   const data = await res.json();
+  if (!Array.isArray(data.results)) throw new Error('Invalid response: results is not an array');
   return data.results;
 }
 
