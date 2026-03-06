@@ -35,3 +35,28 @@ export interface Template {
   tags: string[];
   gradient: string;
 }
+
+export interface GitChange {
+  file: string;
+  status: 'modified' | 'added' | 'deleted' | 'untracked' | 'renamed';
+}
+
+export interface GitStatus {
+  branch: string;
+  changes: GitChange[];
+  isRepo: boolean;
+  hasRemote: boolean;
+  remoteUrl?: string;
+}
+
+export interface GitCommit {
+  hash: string;
+  shortHash: string;
+  message: string;
+  author: string;
+  date: string;
+}
+
+export interface GitLog {
+  commits: GitCommit[];
+}

@@ -1,4 +1,4 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2 } from 'lucide-react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
@@ -15,6 +15,7 @@ export default function TopBar() {
     togglePreview, showPreview,
     toggleSidebar, showSidebar,
     toggleAIPanel, showAIPanel,
+    toggleGitPanel, showGitPanel,
   } = useAppStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -93,6 +94,13 @@ export default function TopBar() {
           title={`${showAIPanel ? '隐藏' : '显示'} AI 面板`}
         >
           <PanelRight size={15} />
+        </button>
+        <button
+          onClick={toggleGitPanel}
+          className={`p-1.5 rounded-lg transition-colors ${showGitPanel ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+          title={`${showGitPanel ? '隐藏' : '显示'} Git 面板`}
+        >
+          <GitBranch size={15} />
         </button>
       </div>
 
