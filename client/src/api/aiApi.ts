@@ -7,6 +7,7 @@ interface StreamAIChatOptions {
     techStack?: string[];
     currentFile?: string;
     currentFileContent?: string;
+    relatedFiles?: { path: string; content: string }[];
   };
   model: string;
   onChunk: (text: string) => void;

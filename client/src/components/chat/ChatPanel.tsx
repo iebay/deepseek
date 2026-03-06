@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat } from '../../api/aiApi';
-import { batchWriteFiles } from '../../api/filesApi';
-import type { ChatMessage } from '../../types';
+import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
+import type { ChatMessage, FileNode } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
 
@@ -178,6 +178,47 @@ function MessageBubble({
   );
 }
 
+function extractFilePaths(text: string, tree: FileNode | null): string[] {
+  if (!tree) return [];
+
+  // File extensions recognized for context extraction
+  const FILE_EXT_PATTERN = 'tsx?|jsx?|css|html|json|md|py|go|rs';
+
+  const paths: string[] = [];
+  const pathRegex = new RegExp(
+    `(?:^|\\s|\`)((?:\\./|src/|server/|client/)?[\\w\\-\\.\\/]+\\.(?:${FILE_EXT_PATTERN}))`,
+    'gi'
+  );
+  let match;
+  while ((match = pathRegex.exec(text)) !== null) {
+    paths.push(match[1]);
+  }
+
+  // Also match bare file names (e.g. "App.tsx") and look them up in the file tree
+  const fileNameRegex = new RegExp(`\\b([\\w\\-]+\\.(?:${FILE_EXT_PATTERN}))\\b`, 'gi');
+  while ((match = fileNameRegex.exec(text)) !== null) {
+    const fileName = match[1];
+    const fullPath = findFileInTree(tree, fileName);
+    if (fullPath && !paths.includes(fullPath)) {
+      paths.push(fullPath);
+    }
+  }
+
+  return [...new Set(paths)];
+}
+
+function findFileInTree(node: FileNode | null, fileName: string): string | null {
+  if (!node) return null;
+  if (node.type === 'file' && node.name === fileName) return node.path;
+  if (node.children) {
+    for (const child of node.children) {
+      const found = findFileInTree(child, fileName);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export default function ChatPanel() {
   const {
     chatMessages, addChatMessage, updateLastAssistantMessage,
@@ -252,11 +293,32 @@ export default function ChatPanel() {
 
     const activeTab = openTabs.find(t => t.path === activeTabPath);
 
+    // Extract mentioned file paths from the user message and read their content.
+    // Limit to MAX_RELATED_FILES to avoid bloating the AI context window.
+    const MAX_RELATED_FILES = 3;
+    const relatedFiles: { path: string; content: string }[] = [];
+    if (currentProject) {
+      const mentionedPaths = extractFilePaths(msgText, fileTree);
+      for (const filePath of mentionedPaths.slice(0, MAX_RELATED_FILES)) {
+        // Skip if already loaded as the active tab
+        if (filePath === activeTab?.path) continue;
+        try {
+          const content = await fetchFileContent(filePath);
+          if (content) {
+            relatedFiles.push({ path: filePath, content });
+          }
+        } catch {
+          // ignore unresolvable paths
+        }
+      }
+    }
+
     const context = {
       fileTree: buildFileTreeText(),
       techStack: currentProject?.techStack ?? [],
       currentFile: activeTab?.path,
       currentFileContent: activeTab?.content,
+      relatedFiles,
     };
 
     let fullContent = '';
