@@ -26,6 +26,10 @@ router.get('/tree', (req: Request, res: Response) => {
 router.get('/content', (req: Request, res: Response) => {
   const filePath = req.query.path as string;
   if (!filePath) return res.status(400).json({ error: 'path query param required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(filePath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
   try {
     const content = readFile(filePath);
     res.json({ content });
@@ -38,6 +42,10 @@ router.get('/content', (req: Request, res: Response) => {
 router.post('/write', (req: Request, res: Response) => {
   const { path: filePath, content } = req.body as { path: string; content: string };
   if (!filePath || content === undefined) return res.status(400).json({ error: 'path and content required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(filePath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
   try {
     writeFile(filePath, content);
     res.json({ success: true });
