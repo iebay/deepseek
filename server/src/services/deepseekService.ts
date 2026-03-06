@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { Response } from 'express';
+import { loadProjectMemory } from './memoryService';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -12,6 +13,7 @@ export interface ProjectContext {
   currentFile?: string;
   currentFileContent?: string;
   relatedFiles?: { path: string; content: string }[];
+  projectRoot?: string;
 }
 
 const SYSTEM_PROMPT = `你是 DeepSeek Code AI 助手——一个集成在代码编辑器中的全栈开发 AI。你拥有完整的项目上下文访问权限，可以直接读取和修改用户的本地文件。
@@ -91,6 +93,10 @@ export async function streamChat(
     context.relatedFiles?.length
       ? `### 用户提到的相关文件\n${context.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
       : '',
+    context.projectRoot ? (() => {
+      const memory = loadProjectMemory(context.projectRoot);
+      return memory ? `\n\n---\n## 项目 AI 记忆（必须遵守）\n\n${memory}` : '';
+    })() : '',
     '\n注意: 以上项目信息是实时的。你可以基于这些信息分析和修改用户的代码。',
   ].filter(Boolean).join('');
 

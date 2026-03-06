@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle } from 'lucide-react';
+import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, StopCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
@@ -141,6 +141,27 @@ function formatTime(ts?: number): string {
   if (!ts) return '';
   const d = new Date(ts);
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function exportChatAsMarkdown(messages: ChatMessage[], projectName: string): void {
+  const dateTime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const header = `# ${projectName || 'DeepSeek'} 对话记录\n\n> 导出时间：${dateTime}\n\n---\n\n`;
+  const body = messages
+    .filter(m => m.role !== 'system')
+    .map(m => {
+      const role = m.role === 'user' ? '**用户**' : '**AI 助手**';
+      const time = m.timestamp ? ` *(${formatTime(m.timestamp)})*` : '';
+      return `### ${role}${time}\n\n${m.content}`;
+    })
+    .join('\n\n---\n\n');
+  const content = header + body;
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `chat-${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function MessageBubble({
@@ -319,6 +340,7 @@ export default function ChatPanel() {
       currentFile: activeTab?.path,
       currentFileContent: activeTab?.content,
       relatedFiles,
+      projectRoot: currentProject?.path,
     };
 
     let fullContent = '';
@@ -395,13 +417,33 @@ export default function ChatPanel() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setShowClearConfirm(true)}
-          className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
-          title="清空对话"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          {isAiLoading && (
+            <button
+              onClick={() => abortRef.current?.()}
+              className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
+              title="停止生成"
+            >
+              <StopCircle size={14} />
+            </button>
+          )}
+          {chatMessages.length > 0 && (
+            <button
+              onClick={() => exportChatAsMarkdown(chatMessages, currentProject?.name ?? '')}
+              className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+              title="导出对话"
+            >
+              <Download size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
+            title="清空对话"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Context info bar */}
