@@ -37,8 +37,6 @@ export async function saveFile(filePath: string, content: string): Promise<void>
   }
 }
 
-export const writeFileContent = saveFile;
-
 export async function batchWriteFiles(
   files: { path: string; content: string }[],
   projectRoot: string
