@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, FileCode, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { ChevronRight, ChevronDown, FileCode, FileImage, FileArchive, FileJson, FileText, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X, Upload } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { fetchFileContent } from '../../api/filesApi';
+import { fetchFileContent, uploadZip } from '../../api/filesApi';
+import { fetchFileTree } from '../../api/filesApi';
 import type { FileNode } from '../../types';
+import { FileTreeSkeleton } from '../ui/Skeleton';
 
 const EXT_COLORS: Record<string, string> = {
   '.tsx': '#61dafb', '.ts': '#3178c6', '.jsx': '#61dafb', '.js': '#f7df1e',
@@ -11,6 +13,19 @@ const EXT_COLORS: Record<string, string> = {
   '.svg': '#ffb13b', '.png': '#a8c7fa', '.jpg': '#a8c7fa', '.gif': '#a8c7fa',
   '.sh': '#89e051', '.env': '#8b949e', '.yaml': '#cc3e44', '.yml': '#cc3e44',
 };
+
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp']);
+const ARCHIVE_EXTS = new Set(['.zip', '.tar', '.gz', '.rar', '.7z']);
+const JSON_EXTS = new Set(['.json', '.jsonc']);
+const TEXT_EXTS = new Set(['.md', '.txt', '.rst', '.env', '.gitignore', '.editorconfig']);
+
+function getFileIcon(ext: string, color: string) {
+  if (IMAGE_EXTS.has(ext)) return <FileImage size={14} className="shrink-0" style={{ color }} />;
+  if (ARCHIVE_EXTS.has(ext)) return <FileArchive size={14} className="shrink-0" style={{ color }} />;
+  if (JSON_EXTS.has(ext)) return <FileJson size={14} className="shrink-0" style={{ color }} />;
+  if (TEXT_EXTS.has(ext)) return <FileText size={14} className="shrink-0" style={{ color }} />;
+  return <FileCode size={14} className="shrink-0" style={{ color }} />;
+}
 
 function getAllPaths(node: FileNode): string[] {
   if (node.type === 'file') return [];
@@ -92,17 +107,19 @@ function FileTreeNode({
       onClick={handleFileClick}
       title={node.path}
     >
-      <FileCode size={14} className="shrink-0" style={{ color }} />
+      {getFileIcon(node.extension || '', color)}
       <span className="truncate flex-1">{node.name}</span>
     </button>
   );
 }
 
 export default function FileTree() {
-  const { fileTree, currentProject } = useAppStore();
+  const { fileTree, currentProject, setFileTree, showToast } = useAppStore();
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize with first 2 levels expanded
   useEffect(() => {
@@ -158,6 +175,28 @@ export default function FileTree() {
     setExpandedPaths(new Set());
   }
 
+  async function handleZipUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !currentProject) return;
+    setLoading(true);
+    try {
+      await uploadZip(file, currentProject.path);
+      // Refresh file tree
+      const tree = await fetchFileTree(currentProject.path);
+      setFileTree(tree);
+      showToast('ZIP 解压成功', 'success');
+    } catch (err) {
+      showToast(`ZIP 解压失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setLoading(false);
+      if (zipInputRef.current) zipInputRef.current.value = '';
+    }
+  }
+
+  if (loading) {
+    return <FileTreeSkeleton />;
+  }
+
   if (!fileTree) {
     return (
       <div className="p-4 text-xs text-[#6e7681] flex flex-col items-center gap-2 mt-8">
@@ -183,6 +222,24 @@ export default function FileTree() {
             >
               <Search size={12} />
             </button>
+            {currentProject && (
+              <>
+                <button
+                  onClick={() => zipInputRef.current?.click()}
+                  className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                  title="上传 ZIP 并解压"
+                >
+                  <Upload size={12} />
+                </button>
+                <input
+                  ref={zipInputRef}
+                  type="file"
+                  accept=".zip"
+                  className="hidden"
+                  onChange={handleZipUpload}
+                />
+              </>
+            )}
             <button
               onClick={expandAll}
               className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"

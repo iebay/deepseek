@@ -3,9 +3,10 @@ import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, 
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
-import type { ChatMessage, FileNode } from '../../types';
+import type { ChatMessage, MultimodalContentPart, FileNode } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
+import ImageUpload, { type UploadedImage } from './ImageUpload';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -151,7 +152,10 @@ function exportChatAsMarkdown(messages: ChatMessage[], projectName: string): voi
     .map(m => {
       const role = m.role === 'user' ? '**用户**' : '**AI 助手**';
       const time = m.timestamp ? ` *(${formatTime(m.timestamp)})*` : '';
-      return `### ${role}${time}\n\n${m.content}`;
+      const content = typeof m.content === 'string'
+        ? m.content
+        : m.content.map(p => p.type === 'text' ? (p.text ?? '') : '[图片]').join('\n');
+      return `### ${role}${time}\n\n${content}`;
     })
     .join('\n\n---\n\n');
   const content = header + body;
@@ -176,6 +180,31 @@ function MessageBubble({
   appliedFiles?: Set<string>;
 }) {
   const isUser = msg.role === 'user';
+
+  function renderUserContent() {
+    if (typeof msg.content === 'string') {
+      return <span className="whitespace-pre-wrap">{msg.content}</span>;
+    }
+    // Multimodal content
+    return (
+      <div className="space-y-2">
+        {msg.content.map((part, i) => {
+          if (part.type === 'text') {
+            return <span key={i} className="whitespace-pre-wrap">{part.text}</span>;
+          }
+          if (part.type === 'image_url' && part.image_url) {
+            return (
+              <img key={i} src={part.image_url.url} alt="attached" className="max-w-full rounded-lg border border-[#30363d]" style={{ maxHeight: 200 }} />
+            );
+          }
+          return null;
+        })}
+      </div>
+    );
+  }
+
+  const textContent = typeof msg.content === 'string' ? msg.content : (msg.content.find(p => p.type === 'text')?.text ?? '');
+
   return (
     <div className={`flex gap-2.5 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[#388bfd]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
@@ -184,10 +213,10 @@ function MessageBubble({
       <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
         <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[#388bfd]/20 text-[#e6edf3] rounded-tr-sm' : 'bg-[#161b22] text-[#e6edf3] border border-[#30363d] rounded-tl-sm'}`}>
           {isUser ? (
-            <span className="whitespace-pre-wrap">{msg.content}</span>
+            renderUserContent()
           ) : (
             <div className="leading-relaxed">
-              {renderContent(msg.content, onApplyFile, onApplyAll, appliedFiles)}
+              {renderContent(textContent, onApplyFile, onApplyAll, appliedFiles)}
             </div>
           )}
         </div>
@@ -249,6 +278,7 @@ export default function ChatPanel() {
   } = useAppStore();
 
   const [input, setInput] = useState('');
+  const [images, setImages] = useState<UploadedImage[]>([]);
   const [elapsed, setElapsed] = useState<number>(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
@@ -301,10 +331,25 @@ export default function ChatPanel() {
 
   async function handleSend(text?: string) {
     const msgText = (text ?? input).trim();
-    if (!msgText || isAiLoading) return;
+    if ((!msgText && images.length === 0) || isAiLoading) return;
     setInput('');
+    const pendingImages = [...images];
+    setImages([]);
 
-    const userMsg: ChatMessage = { role: 'user', content: msgText, timestamp: Date.now() };
+    // Build user message content (multimodal if images present)
+    let userContent: string | MultimodalContentPart[];
+    if (pendingImages.length > 0) {
+      const parts: MultimodalContentPart[] = [];
+      if (msgText) parts.push({ type: 'text', text: msgText });
+      for (const img of pendingImages) {
+        parts.push({ type: 'image_url', image_url: { url: img.url } });
+      }
+      userContent = parts;
+    } else {
+      userContent = msgText;
+    }
+
+    const userMsg: ChatMessage = { role: 'user', content: userContent, timestamp: Date.now() };
     addChatMessage(userMsg);
 
     const assistantMsg: ChatMessage = { role: 'assistant', content: '', timestamp: Date.now() };
@@ -385,7 +430,8 @@ export default function ChatPanel() {
       return;
     }
     const lastMsg = chatMessages[chatMessages.length - 1];
-    const parsed = lastMsg ? tryParseFileChanges(lastMsg.content) : null;
+    const lastContent = typeof lastMsg?.content === 'string' ? lastMsg.content : '';
+    const parsed = lastContent ? tryParseFileChanges(lastContent) : null;
     if (!parsed?.files?.length) {
       showToast('未找到可应用的文件修改', 'error');
       return;
@@ -501,24 +547,34 @@ export default function ChatPanel() {
       {/* Input */}
       <div className="px-3 py-2.5 border-t border-[#30363d] shrink-0">
         <div className="flex gap-2 items-end">
-          <textarea
-            ref={textareaRef}
-            className="flex-1 bg-[#161b22] border border-[#30363d] rounded-xl text-sm text-[#e6edf3] placeholder-[#6e7681] px-3 py-2.5 resize-none focus:outline-none focus:border-[#388bfd] transition-colors min-h-[40px] max-h-[120px]"
-            style={{ height: '40px' }}
-            placeholder="描述你的需求..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            disabled={isAiLoading}
-          />
+          <div className="flex-1 bg-[#161b22] border border-[#30363d] rounded-xl focus-within:border-[#388bfd] transition-colors">
+            {images.length > 0 && (
+              <div className="px-3 pt-2">
+                <ImageUpload images={images} onChange={setImages} />
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              className="w-full bg-transparent text-sm text-[#e6edf3] placeholder-[#6e7681] px-3 py-2.5 resize-none focus:outline-none min-h-[40px] max-h-[120px]"
+              style={{ height: '40px' }}
+              placeholder="描述你的需求..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={isAiLoading}
+            />
+            <div className="px-2 pb-1.5">
+              <ImageUpload images={[]} onChange={(imgs) => setImages(prev => [...prev, ...imgs])} />
+            </div>
+          </div>
           <button
             onClick={() => handleSend()}
-            disabled={!input.trim() || isAiLoading}
+            disabled={(!input.trim() && images.length === 0) || isAiLoading}
             className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#388bfd] hover:bg-[#58a6ff] disabled:bg-[#21262d] disabled:text-[#6e7681] text-white rounded-xl transition-colors"
           >
             <Send size={15} />

@@ -2,9 +2,15 @@ import OpenAI from 'openai';
 import type { Response } from 'express';
 import { loadProjectMemory } from './memoryService';
 
+export interface MultimodalContentPart {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | MultimodalContentPart[];
 }
 
 export interface ProjectContext {
@@ -80,7 +86,7 @@ export async function streamChat(
 
   const client = new OpenAI({
     apiKey,
-    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
+    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
   });
 
   const systemContent = [
@@ -102,7 +108,12 @@ export async function streamChat(
 
   const allMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemContent },
-    ...messages.map(m => ({ role: m.role, content: m.content } as OpenAI.Chat.ChatCompletionMessageParam)),
+    ...messages.map(m => {
+      if (m.role === 'user' && Array.isArray(m.content)) {
+        return { role: 'user', content: m.content } as OpenAI.Chat.ChatCompletionMessageParam;
+      }
+      return { role: m.role, content: m.content as string } as OpenAI.Chat.ChatCompletionMessageParam;
+    }),
   ];
 
   res.setHeader('Content-Type', 'text/event-stream');

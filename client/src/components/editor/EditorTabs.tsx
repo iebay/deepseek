@@ -9,9 +9,10 @@ interface ContextMenu {
 }
 
 export default function EditorTabs() {
-  const { openTabs, activeTabPath, setActiveTab, closeTab, closeOtherTabs, closeAllTabs, showToast } = useAppStore();
+  const { openTabs, activeTabPath, setActiveTab, closeTab, closeOtherTabs, closeAllTabs, reorderTabs, showToast } = useAppStore();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -29,6 +30,23 @@ export default function EditorTabs() {
     setContextMenu({ x: e.clientX, y: e.clientY, path });
   }
 
+  function handleDragStart(e: React.DragEvent, index: number) {
+    dragIndexRef.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  function handleDrop(e: React.DragEvent, toIndex: number) {
+    e.preventDefault();
+    if (dragIndexRef.current === null || dragIndexRef.current === toIndex) return;
+    reorderTabs(dragIndexRef.current, toIndex);
+    dragIndexRef.current = null;
+  }
+
   if (openTabs.length === 0) {
     return (
       <div className="h-9 bg-[#0d1117] border-b border-[#30363d] flex items-center px-4 shrink-0">
@@ -40,9 +58,13 @@ export default function EditorTabs() {
   return (
     <>
       <div className="h-9 bg-[#0d1117] border-b border-[#30363d] flex items-center overflow-x-auto shrink-0 scrollbar-thin">
-        {openTabs.map(tab => (
+        {openTabs.map((tab, index) => (
           <div
             key={tab.path}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, index)}
             className={`flex items-center gap-1.5 px-3 h-full border-r border-[#30363d] cursor-pointer text-xs shrink-0 group transition-colors select-none ${
               tab.path === activeTabPath
                 ? 'bg-[#1e1e1e] text-[#e6edf3] border-t-2 border-t-[#388bfd]'

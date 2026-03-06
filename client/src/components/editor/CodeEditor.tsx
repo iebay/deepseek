@@ -3,8 +3,70 @@ import Editor from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import EditorTabs from './EditorTabs';
 import { useAppStore } from '../../store/appStore';
-import { saveFile } from '../../api/filesApi';
-import { FileCode, ChevronRight, Keyboard, Sparkles, FolderOpen, Search } from 'lucide-react';
+import { saveFile, getRawFileUrl } from '../../api/filesApi';
+import { FileCode, ChevronRight, Keyboard, Sparkles, FolderOpen, Search, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.avif']);
+const BINARY_EXTENSIONS = new Set(['.pdf', '.zip', '.tar', '.gz', '.rar', '.7z', '.exe', '.bin', '.dll', '.so', '.dylib', '.wasm', '.mp4', '.mp3', '.ogg', '.wav', '.ttf', '.woff', '.woff2', '.eot']);
+
+function isImageFile(path: string): boolean {
+  const ext = '.' + (path.split('.').pop() || '').toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext);
+}
+
+function isBinaryFile(path: string): boolean {
+  const ext = '.' + (path.split('.').pop() || '').toLowerCase();
+  return BINARY_EXTENSIONS.has(ext);
+}
+
+function ImagePreview({ path }: { path: string }) {
+  const [zoom, setZoom] = useState(100);
+  const [rotation, setRotation] = useState(0);
+  const url = getRawFileUrl(path);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-3 py-2 bg-[#161b22] border-b border-[#30363d] shrink-0">
+        <span className="text-xs text-[#8b949e]">{zoom}%</span>
+        <button onClick={() => setZoom(z => Math.min(400, z + 25))} className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]" title="放大">
+          <ZoomIn size={13} />
+        </button>
+        <button onClick={() => setZoom(z => Math.max(25, z - 25))} className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]" title="缩小">
+          <ZoomOut size={13} />
+        </button>
+        <button onClick={() => setRotation(r => (r + 90) % 360)} className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]" title="旋转">
+          <RotateCw size={13} />
+        </button>
+        <button onClick={() => { setZoom(100); setRotation(0); }} className="text-xs text-[#6e7681] hover:text-[#e6edf3] px-1.5 py-0.5 rounded hover:bg-[#21262d]">重置</button>
+      </div>
+      <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-[#0d1117]">
+        <img
+          src={url}
+          alt={path}
+          style={{ transform: `scale(${zoom / 100}) rotate(${rotation}deg)`, transition: 'transform 0.2s', maxWidth: '100%' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BinaryFileNotice({ path }: { path: string }) {
+  const ext = '.' + (path.split('.').pop() || '').toLowerCase();
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+      <FileCode size={40} className="text-[#30363d] mb-4" />
+      <p className="text-[#8b949e] text-sm mb-1">无法预览二进制文件</p>
+      <p className="text-[#6e7681] text-xs">{ext.toUpperCase()} 文件无法在编辑器中显示</p>
+      <a
+        href={getRawFileUrl(path)}
+        download
+        className="mt-4 text-xs text-[#388bfd] hover:underline"
+      >
+        下载文件
+      </a>
+    </div>
+  );
+}
 
 function getLanguage(filename: string): string {
   const ext = filename.split('.').pop() || '';
@@ -158,33 +220,45 @@ export default function CodeEditor() {
       {activeTab ? (
         <>
           <Breadcrumb path={activeTab.path} />
-          <div className="flex-1 min-h-0">
-            <Editor
-              key={activeTab.path}
-              height="100%"
-              language={getLanguage(activeTab.name)}
-              value={activeTab.content}
-              onChange={handleChange}
-              onMount={handleEditorMount}
-              theme="vs-dark"
-              options={{
-                fontSize: 14,
-                fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
-                fontLigatures: true,
-                minimap: { enabled: true },
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-                renderLineHighlight: 'line',
-                smoothScrolling: true,
-                cursorBlinking: 'smooth',
-                padding: { top: 8 },
-              }}
-            />
-          </div>
-          <StatusBar filename={activeTab.name} line={cursor.line} column={cursor.column} />
+          {isImageFile(activeTab.path) ? (
+            <div className="flex-1 min-h-0">
+              <ImagePreview path={activeTab.path} />
+            </div>
+          ) : isBinaryFile(activeTab.path) ? (
+            <div className="flex-1 min-h-0">
+              <BinaryFileNotice path={activeTab.path} />
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 min-h-0">
+                <Editor
+                  key={activeTab.path}
+                  height="100%"
+                  language={getLanguage(activeTab.name)}
+                  value={activeTab.content}
+                  onChange={handleChange}
+                  onMount={handleEditorMount}
+                  theme="vs-dark"
+                  options={{
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
+                    fontLigatures: true,
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    wordWrap: 'on',
+                    lineNumbers: 'on',
+                    renderLineHighlight: 'line',
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    padding: { top: 8 },
+                  }}
+                />
+              </div>
+              <StatusBar filename={activeTab.name} line={cursor.line} column={cursor.column} />
+            </>
+          )}
         </>
       ) : (
         <EmptyState />

@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { getFileTree, readFile, writeFile, backupFile, restoreBackup } from '../services/fileService';
 import path from 'path';
+import fs from 'fs';
+import mime from 'mime-types';
+import { isPathSafe, getAllowedRoots } from '../utils/pathUtils';
 
 const router = Router();
 
@@ -64,6 +67,29 @@ router.post('/restore', (req: Request, res: Response) => {
   try {
     restoreBackup(backupPath, originalPath);
     res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
+router.get('/raw', (req: Request, res: Response) => {
+  const filePath = req.query.path as string;
+  if (!filePath) return res.status(400).json({ error: 'path query param required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(filePath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  const resolved = path.resolve(filePath);
+  try {
+    const stat = fs.statSync(resolved);
+    if (!stat.isFile()) return res.status(400).json({ error: 'Not a file' });
+    const mimeType = mime.lookup(resolved) || 'application/octet-stream';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Cache-Control', 'no-store');
+    const stream = fs.createReadStream(resolved);
+    stream.pipe(res);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ error: msg });

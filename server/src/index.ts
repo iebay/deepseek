@@ -1,13 +1,17 @@
 import 'dotenv/config';
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import WebSocket from 'ws';
 import filesRouter from './routes/files';
 import aiRouter from './routes/ai';
 import templatesRouter from './routes/templates';
 import gitRouter from './routes/git';
 import memoryRouter from './routes/memory';
+import uploadRouter from './routes/upload';
+import { handleTerminalUpgrade } from './routes/terminal';
 import { analyzeProject } from './services/projectAnalyzer';
 
 const app = express();
@@ -46,6 +50,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/memory', memoryRouter);
+app.use('/api/upload', uploadRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };
@@ -59,7 +64,23 @@ app.post('/api/project/analyze', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  const url = request.url || '';
+  if (url.startsWith('/ws/terminal')) {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      handleTerminalUpgrade(wss, ws, request).catch((err) => {
+        console.error('[Terminal] Upgrade error:', err);
+      });
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
+server.listen(PORT, () => {
   console.log(`DeepSeek server running on http://localhost:${PORT}`);
 });
 

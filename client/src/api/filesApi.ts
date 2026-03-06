@@ -21,6 +21,10 @@ export async function fetchFileContent(filePath: string): Promise<string> {
   return data.content as string;
 }
 
+export function getRawFileUrl(filePath: string): string {
+  return `${BASE}/raw?path=${encodeURIComponent(filePath)}`;
+}
+
 export async function saveFile(filePath: string, content: string): Promise<void> {
   const res = await fetch(`${BASE}/write`, {
     method: 'POST',
@@ -61,5 +65,19 @@ export async function restoreFile(backupPath: string, originalPath: string): Pro
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || '恢复备份失败');
+  }
+}
+
+export async function uploadZip(file: File, targetDir: string): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('targetDir', targetDir);
+  const res = await fetch('/api/upload/zip', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'ZIP 上传失败');
   }
 }
