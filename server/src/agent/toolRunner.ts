@@ -4,6 +4,7 @@ import { readFile, writeFile, getFileTree } from '../services/fileService';
 import { isPathSafe, getAllowedRoots } from '../utils/pathUtils';
 
 const SAFE_COMMANDS = /^(npm |npx |tsc |eslint |prettier |cat |ls |dir |echo )/;
+const SHELL_METACHARACTERS = /[;&|`$<>\\]/;
 const MAX_RESULT_LENGTH = 3000;
 
 function truncate(str: string, max = MAX_RESULT_LENGTH): string {
@@ -120,6 +121,9 @@ export async function runTool(
         if (!command) return '错误: 缺少 command 参数';
         if (!SAFE_COMMANDS.test(command)) {
           return `错误: 命令不在安全白名单中。允许的命令前缀: npm, npx, tsc, eslint, prettier, cat, ls, dir, echo`;
+        }
+        if (SHELL_METACHARACTERS.test(command)) {
+          return '错误: 命令包含不允许的特殊字符（; & | ` $ < > \\）';
         }
         const cwd = args.cwd
           ? path.isAbsolute(args.cwd as string)
