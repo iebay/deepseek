@@ -8,21 +8,34 @@ interface AppState {
   activeTabPath: string | null;
   selectedModel: string;
   showPreview: boolean;
+  showSidebar: boolean;
+  showAIPanel: boolean;
+  sidebarWidth: number;
+  aiPanelWidth: number;
   chatMessages: ChatMessage[];
   isAiLoading: boolean;
+  toast: { message: string; type: 'success' | 'error' | 'info' } | null;
 
   setFileTree: (tree: FileNode | null) => void;
   setCurrentProject: (project: ProjectInfo | null) => void;
   openTab: (tab: Tab) => void;
   closeTab: (path: string) => void;
+  closeOtherTabs: (path: string) => void;
+  closeAllTabs: () => void;
   setActiveTab: (path: string) => void;
   updateTabContent: (path: string, content: string, isDirty: boolean) => void;
   setSelectedModel: (model: string) => void;
   togglePreview: () => void;
+  toggleSidebar: () => void;
+  toggleAIPanel: () => void;
+  setSidebarWidth: (width: number) => void;
+  setAIPanelWidth: (width: number) => void;
   addChatMessage: (message: ChatMessage) => void;
   updateLastAssistantMessage: (content: string) => void;
   clearChat: () => void;
   setAiLoading: (loading: boolean) => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  clearToast: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -32,8 +45,13 @@ export const useAppStore = create<AppState>((set) => ({
   activeTabPath: null,
   selectedModel: 'deepseek-chat',
   showPreview: false,
+  showSidebar: true,
+  showAIPanel: true,
+  sidebarWidth: 240,
+  aiPanelWidth: 320,
   chatMessages: [],
   isAiLoading: false,
+  toast: null,
 
   setFileTree: (tree) => set({ fileTree: tree }),
   setCurrentProject: (project) => set({ currentProject: project }),
@@ -56,6 +74,14 @@ export const useAppStore = create<AppState>((set) => ({
       return { openTabs: newTabs, activeTabPath: newActive };
     }),
 
+  closeOtherTabs: (path) =>
+    set((state) => ({
+      openTabs: state.openTabs.filter((t) => t.path === path),
+      activeTabPath: path,
+    })),
+
+  closeAllTabs: () => set({ openTabs: [], activeTabPath: null }),
+
   setActiveTab: (path) => set({ activeTabPath: path }),
 
   updateTabContent: (path, content, isDirty) =>
@@ -67,6 +93,10 @@ export const useAppStore = create<AppState>((set) => ({
 
   setSelectedModel: (model) => set({ selectedModel: model }),
   togglePreview: () => set((state) => ({ showPreview: !state.showPreview })),
+  toggleSidebar: () => set((state) => ({ showSidebar: !state.showSidebar })),
+  toggleAIPanel: () => set((state) => ({ showAIPanel: !state.showAIPanel })),
+  setSidebarWidth: (width) => set({ sidebarWidth: width }),
+  setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
 
   addChatMessage: (message) =>
     set((state) => ({ chatMessages: [...state.chatMessages, message] })),
@@ -74,7 +104,11 @@ export const useAppStore = create<AppState>((set) => ({
   updateLastAssistantMessage: (content) =>
     set((state) => {
       const msgs = [...state.chatMessages];
-      const lastIdx = msgs.findLastIndex((m) => m.role === 'assistant');
+      // Use manual loop for ES2020 compatibility (findLastIndex requires ES2023)
+      let lastIdx = -1;
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'assistant') { lastIdx = i; break; }
+      }
       if (lastIdx >= 0) {
         msgs[lastIdx] = { ...msgs[lastIdx], content };
       }
@@ -83,4 +117,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   clearChat: () => set({ chatMessages: [] }),
   setAiLoading: (loading) => set({ isAiLoading: loading }),
+
+  showToast: (message, type = 'info') =>
+    set({ toast: { message, type } }),
+  clearToast: () => set({ toast: null }),
 }));
