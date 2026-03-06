@@ -81,3 +81,39 @@ export async function uploadZip(file: File, targetDir: string): Promise<void> {
     throw new Error(err.error || 'ZIP 上传失败');
   }
 }
+
+export async function createFileOrDir(filePath: string, type: 'file' | 'directory', content?: string): Promise<void> {
+  const res = await fetch(`${BASE}/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: filePath, type, content: content ?? '' }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '创建失败');
+  }
+}
+
+export async function renameFile(oldPath: string, newPath: string): Promise<void> {
+  const res = await fetch(`${BASE}/rename`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ oldPath, newPath }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '重命名失败');
+  }
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+  const res = await fetch(`${BASE}/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: filePath }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '删除失败');
+  }
+}
