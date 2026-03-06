@@ -102,8 +102,10 @@ export default function Terminal() {
     }).catch((err) => {
       console.error('Failed to load terminal dependencies:', err);
       if (terminalRef.current) {
-        terminalRef.current.innerHTML =
-          '<div style="padding:16px;color:#f85149;font-size:13px;">终端依赖加载失败，请安装 @xterm/xterm 和 @xterm/addon-fit</div>';
+        const msg = document.createElement('div');
+        msg.style.cssText = 'padding:16px;color:#f85149;font-size:13px;';
+        msg.textContent = '终端依赖加载失败，请安装 @xterm/xterm 和 @xterm/addon-fit';
+        terminalRef.current.appendChild(msg);
       }
     });
   }, []);

@@ -94,13 +94,13 @@ function EditorLayout() {
     <div className="flex flex-col h-screen bg-[#0d1117] text-[#e6edf3]">
       <OfflineIndicator />
       <TopBar onOpenCommandPalette={() => setCmdPaletteOpen(true)} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Left: File Tree */}
         {showSidebar && (
           <>
             <aside
-              className={`shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200 ${
-                isMobile ? 'fixed inset-y-0 left-0 z-40 top-[88px]' : ''
+              className={`border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200 ${
+                isMobile ? 'absolute inset-y-0 left-0 z-40' : 'shrink-0'
               }`}
               style={{ width: isMobile ? Math.min(sidebarWidth, window.innerWidth * 0.8) : sidebarWidth }}
             >
@@ -108,7 +108,7 @@ function EditorLayout() {
             </aside>
             {isMobile && (
               <div
-                className="fixed inset-0 z-30 bg-black/50 top-[88px]"
+                className="absolute inset-0 z-30 bg-black/50"
                 onClick={toggleSidebar}
               />
             )}
@@ -147,8 +147,8 @@ function EditorLayout() {
               <>
                 {!isMobile && <ResizeDivider onResize={handleAIPanelResize} />}
                 <aside
-                  className={`shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200 ${
-                    isMobile ? 'fixed inset-0 z-40 top-[88px] w-full' : ''
+                  className={`border-l border-[#30363d] overflow-hidden transition-all duration-200 ${
+                    isMobile ? 'absolute inset-0 z-40 w-full' : 'shrink-0'
                   }`}
                   style={isMobile ? undefined : { width: aiPanelWidth }}
                 >
@@ -156,7 +156,7 @@ function EditorLayout() {
                 </aside>
                 {isMobile && (
                   <div
-                    className="fixed inset-0 z-30 bg-black/50 top-[88px]"
+                    className="absolute inset-0 z-30 bg-black/50"
                     onClick={toggleAIPanel}
                   />
                 )}

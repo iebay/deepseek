@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, PanelLeft, PanelRight, Eye, Terminal, GitBranch, Trash2, Home, Save, Cpu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import { MODELS } from '../../constants/models';
 
 interface Command {
   id: string;
@@ -44,12 +45,6 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
       document.exitFullscreen();
     }
   }, []);
-
-  const MODELS = [
-    { value: 'deepseek-chat', label: 'DeepSeek V3.2 (通用)' },
-    { value: 'deepseek-reasoner', label: 'DeepSeek R2 (推理)' },
-    { value: 'deepseek-coder', label: 'DeepSeek Coder V3 (编程)' },
-  ];
 
   const nextModel = MODELS[(MODELS.findIndex(m => m.value === selectedModel) + 1) % MODELS.length];
 

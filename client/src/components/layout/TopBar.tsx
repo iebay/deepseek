@@ -3,12 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import { useIsMobile } from '../../hooks/useMediaQuery';
-
-const MODELS = [
-  { value: 'deepseek-chat', label: 'DeepSeek V3.2 (通用)' },
-  { value: 'deepseek-reasoner', label: 'DeepSeek R2 (推理)' },
-  { value: 'deepseek-coder', label: 'DeepSeek Coder V3 (编程)' },
-];
+import { MODELS } from '../../constants/models';
 
 interface TopBarProps {
   onOpenCommandPalette?: () => void;

@@ -3,9 +3,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY client/package*.json ./client/
 COPY server/package*.json ./server/
-RUN npm install
-RUN cd client && npm install
-RUN cd server && npm install
+RUN npm ci
+RUN cd client && npm ci
+RUN cd server && npm ci
 COPY . .
 RUN cd client && npm run build
 RUN cd server && npm run build
