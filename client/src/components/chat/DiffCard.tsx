@@ -1,9 +1,20 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Check, FileCode } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check, FileCode, Download } from 'lucide-react';
 
 interface FileChange {
   path: string;
   content: string;
+}
+
+function downloadFile(file: FileChange) {
+  const fileName = file.path.replace(/\\/g, '/').split('/').pop() || 'file.txt';
+  const blob = new Blob([file.content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 interface DiffCardProps {
@@ -52,6 +63,13 @@ function FileCard({
 
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-[10px] px-1.5 py-0.5 bg-[#388bfd]/10 text-[#58a6ff] rounded border border-[#388bfd]/20">修改</span>
+          <button
+            onClick={() => downloadFile(file)}
+            className="p-1 text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
+            title="下载文件"
+          >
+            <Download size={12} />
+          </button>
           {applied ? (
             <span className="flex items-center gap-1 text-[10px] text-[#3fb950]">
               <Check size={11} />已应用

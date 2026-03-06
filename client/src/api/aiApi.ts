@@ -8,6 +8,7 @@ interface StreamAIChatOptions {
     currentFile?: string;
     currentFileContent?: string;
     relatedFiles?: { path: string; content: string }[];
+    projectRoot?: string;
   };
   model: string;
   onChunk: (text: string) => void;

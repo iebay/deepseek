@@ -7,40 +7,40 @@ interface Suggestion {
 
 const suggestions: Suggestion[] = [
   {
-    icon: '🗂️',
-    title: '分析项目结构',
-    description: '分析架构并优化代码组织',
-    prompt: '帮我分析项目结构并优化代码组织',
+    icon: '🔍',
+    title: '读取并修改文件',
+    description: '告诉我文件名，我帮你修改代码',
+    prompt: '请读取 src/App.tsx 并帮我优化代码结构',
   },
   {
     icon: '🐛',
-    title: '检查 Bug 和安全问题',
-    description: '发现潜在的 bug 和安全隐患',
-    prompt: '检查当前文件的潜在 bug 和安全问题',
+    title: '修复 Bug',
+    description: '描述问题，AI 直接定位并修复',
+    prompt: '帮我检查当前文件的 bug 并修复',
+  },
+  {
+    icon: '✨',
+    title: '新增功能',
+    description: '描述需求，AI 生成完整代码',
+    prompt: '给当前页面新增一个黑暗模式切换按钮',
   },
   {
     icon: '🔷',
-    title: '添加 TypeScript 类型',
-    description: '为当前文件补充严格类型',
-    prompt: '为当前打开的文件添加 TypeScript 类型',
-  },
-  {
-    icon: '⚡',
-    title: '优化性能和可读性',
-    description: '改善组件性能与代码质量',
-    prompt: '优化当前组件的性能和可读性',
+    title: '完善 TypeScript 类型',
+    description: '添加严格类型，消除 any',
+    prompt: '为当前文件补充完整的 TypeScript 类型定义',
   },
   {
     icon: '🧪',
-    title: '生成单元测试',
-    description: '为当前文件生成测试用例',
-    prompt: '为当前文件生成单元测试',
+    title: '生成测试代码',
+    description: '自动生成单元测试和集成测试',
+    prompt: '为当前文件生成完整的单元测试',
   },
   {
     icon: '♻️',
     title: '重构代码',
-    description: '遵循 SOLID 原则重构代码',
-    prompt: '帮我重构这段代码，遵循 SOLID 原则',
+    description: '拆分组件，提取复用逻辑',
+    prompt: '按照 SOLID 原则重构当前文件，拆分过大的组件',
   },
 ];
 

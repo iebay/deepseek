@@ -5,6 +5,7 @@ import filesRouter from './routes/files';
 import aiRouter from './routes/ai';
 import templatesRouter from './routes/templates';
 import gitRouter from './routes/git';
+import memoryRouter from './routes/memory';
 import { analyzeProject } from './services/projectAnalyzer';
 
 const app = express();
@@ -17,6 +18,7 @@ app.use('/api/files', filesRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/git', gitRouter);
+app.use('/api/memory', memoryRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };
