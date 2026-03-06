@@ -55,6 +55,7 @@ function EditorLayout() {
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
+    openTabs, activeTabPath,
   } = useAppStore();
 
   // Keyboard shortcuts
@@ -104,7 +105,15 @@ function EditorLayout() {
           <>
             <ResizeDivider onResize={(d) => setSidebarWidth(Math.max(160, sidebarWidth + d))} />
             <div className="w-[38%] shrink-0 border-l border-[#30363d] overflow-hidden">
-              <LivePreview />
+              {(() => {
+                const activeTab = openTabs.find((t) => t.path === activeTabPath);
+                const isHtml = activeTab?.path?.match(/\.html?$/i);
+                return (
+                  <LivePreview
+                    srcDoc={isHtml ? activeTab?.content : undefined}
+                  />
+                );
+              })()}
             </div>
           </>
         )}

@@ -15,6 +15,7 @@ interface AppState {
   chatMessages: ChatMessage[];
   isAiLoading: boolean;
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
+  previewUrl: string;
 
   setFileTree: (tree: FileNode | null) => void;
   setCurrentProject: (project: ProjectInfo | null) => void;
@@ -36,6 +37,7 @@ interface AppState {
   setAiLoading: (loading: boolean) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   clearToast: () => void;
+  setPreviewUrl: (url: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -52,6 +54,7 @@ export const useAppStore = create<AppState>((set) => ({
   chatMessages: [],
   isAiLoading: false,
   toast: null,
+  previewUrl: '',
 
   setFileTree: (tree) => set({ fileTree: tree }),
   setCurrentProject: (project) => set({ currentProject: project }),
@@ -121,4 +124,5 @@ export const useAppStore = create<AppState>((set) => ({
   showToast: (message, type = 'info') =>
     set({ toast: { message, type } }),
   clearToast: () => set({ toast: null }),
+  setPreviewUrl: (url) => set({ previewUrl: url }),
 }));
