@@ -41,8 +41,8 @@ export function getFileTree(rootPath: string): FileNode {
           if (a.type === 'file' && b.type === 'directory') return 1;
           return a.name.localeCompare(b.name);
         });
-    } catch {
-      // Permission error, skip
+    } catch (err) {
+      console.warn(`[fileService] Could not read directory "${rootPath}":`, err instanceof Error ? err.message : err);
     }
     return { name, path: rootPath, type: 'directory', children };
   } else {
@@ -80,8 +80,16 @@ export function writeFile(filePath: string, content: string): void {
   if (!isPathSafe(filePath, allowedRoots)) {
     throw new Error('Access denied: path is outside allowed directories');
   }
+  const resolvedPath = path.resolve(filePath);
+  const segments = resolvedPath.split(path.sep);
+  if (segments.includes('node_modules') || segments.includes('.git')) {
+    throw new Error('Access denied: writing to node_modules or .git directories is not allowed');
+  }
   if (!isAllowedFileExtension(path.basename(filePath))) {
     throw new Error(`File type not allowed: ${path.extname(filePath) || '(no extension)'}`);
+  }
+  if (!isFileSizeOk(Buffer.byteLength(content, 'utf-8'))) {
+    throw new Error('Content too large (max 2MB)');
   }
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, 'utf-8');

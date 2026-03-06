@@ -29,7 +29,9 @@ export function analyzeProject(rootPath: string): ProjectInfo {
       if (deps['@supabase/supabase-js']) techStack.push('Supabase');
       if (deps['prisma']) techStack.push('Prisma');
       if (deps['express']) techStack.push('Express');
-    } catch { }
+    } catch (err) {
+      console.warn('[projectAnalyzer] Failed to parse package.json:', err instanceof Error ? err.message : err);
+    }
   }
 
   function countFiles(dir: string) {
@@ -42,7 +44,9 @@ export function analyzeProject(rootPath: string): ProjectInfo {
         if (stat.isDirectory()) countFiles(full);
         else fileCount++;
       }
-    } catch { }
+    } catch (err) {
+      console.warn('[projectAnalyzer] Could not read directory during file count:', err instanceof Error ? err.message : err);
+    }
   }
   countFiles(rootPath);
 

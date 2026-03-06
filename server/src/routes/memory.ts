@@ -3,6 +3,7 @@ import {
   loadProjectMemory, appendDecision,
   saveContextSummary, initPersonality,
   readPersonality, writePersonality,
+  readContext, writeContext,
 } from '../services/memoryService';
 import { validateRootParam } from '../utils/pathUtils';
 
@@ -93,6 +94,36 @@ router.post('/init', (req: Request, res: Response) => {
   if (!validRoot) return;
   try {
     initPersonality(validRoot);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
+// GET /api/memory/context?root=xxx
+router.get('/context', (req: Request, res: Response) => {
+  const root = validateRootParam(req.query.root as string, res);
+  if (!root) return;
+  try {
+    res.json({ content: readContext(root) });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
+// POST /api/memory/context { root, content }
+router.post('/context', (req: Request, res: Response) => {
+  const { root, content } = req.body as { root: string; content: string };
+  const validRoot = validateRootParam(root, res);
+  if (!validRoot) return;
+  if (content === undefined) {
+    res.status(400).json({ error: 'content required' });
+    return;
+  }
+  try {
+    writeContext(validRoot, content);
     res.json({ success: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
