@@ -5,6 +5,7 @@ import TopBar from './components/layout/TopBar';
 import FileTree from './components/fileTree/FileTree';
 import CodeEditor from './components/editor/CodeEditor';
 import ChatPanel from './components/chat/ChatPanel';
+import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
 import Toast from './components/ui/Toast';
 import { useAppStore } from './store/appStore';
@@ -51,7 +52,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
 function EditorLayout() {
   const {
-    showPreview, showSidebar, showAIPanel,
+    showPreview, showSidebar, showAIPanel, showGitPanel,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
@@ -118,6 +119,19 @@ function EditorLayout() {
               style={{ width: aiPanelWidth }}
             >
               <ChatPanel />
+            </aside>
+          </>
+        )}
+
+        {/* Right: Git Panel */}
+        {showGitPanel && (
+          <>
+            <ResizeDivider onResize={handleAIPanelResize} />
+            <aside
+              className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
+              style={{ width: aiPanelWidth }}
+            >
+              <GitPanel />
             </aside>
           </>
         )}

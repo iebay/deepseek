@@ -4,6 +4,7 @@ import cors from 'cors';
 import filesRouter from './routes/files';
 import aiRouter from './routes/ai';
 import templatesRouter from './routes/templates';
+import gitRouter from './routes/git';
 import { analyzeProject } from './services/projectAnalyzer';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/files', filesRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/templates', templatesRouter);
+app.use('/api/git', gitRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };

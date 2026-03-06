@@ -10,6 +10,7 @@ interface AppState {
   showPreview: boolean;
   showSidebar: boolean;
   showAIPanel: boolean;
+  showGitPanel: boolean;
   sidebarWidth: number;
   aiPanelWidth: number;
   chatMessages: ChatMessage[];
@@ -28,6 +29,7 @@ interface AppState {
   togglePreview: () => void;
   toggleSidebar: () => void;
   toggleAIPanel: () => void;
+  toggleGitPanel: () => void;
   setSidebarWidth: (width: number) => void;
   setAIPanelWidth: (width: number) => void;
   addChatMessage: (message: ChatMessage) => void;
@@ -47,6 +49,7 @@ export const useAppStore = create<AppState>((set) => ({
   showPreview: false,
   showSidebar: true,
   showAIPanel: true,
+  showGitPanel: false,
   sidebarWidth: 240,
   aiPanelWidth: 320,
   chatMessages: [],
@@ -95,6 +98,7 @@ export const useAppStore = create<AppState>((set) => ({
   togglePreview: () => set((state) => ({ showPreview: !state.showPreview })),
   toggleSidebar: () => set((state) => ({ showSidebar: !state.showSidebar })),
   toggleAIPanel: () => set((state) => ({ showAIPanel: !state.showAIPanel })),
+  toggleGitPanel: () => set((state) => ({ showGitPanel: !state.showGitPanel })),
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
   setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
 
