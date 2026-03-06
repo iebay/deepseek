@@ -8,6 +8,7 @@ import ChatPanel from './components/chat/ChatPanel';
 import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
 import Toast from './components/ui/Toast';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import { useAppStore } from './store/appStore';
 
 function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number) => void; className?: string }) {
@@ -59,6 +60,19 @@ function EditorLayout() {
     openTabs, activeTabPath,
   } = useAppStore();
 
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const hasDirtyTabs = openTabs.some(t => t.isDirty);
+      if (hasDirtyTabs) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [openTabs]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -90,7 +104,9 @@ function EditorLayout() {
               className="shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200"
               style={{ width: sidebarWidth }}
             >
-              <FileTree />
+              <ErrorBoundary>
+                <FileTree />
+              </ErrorBoundary>
             </aside>
             <ResizeDivider onResize={handleSidebarResize} />
           </>
@@ -98,7 +114,9 @@ function EditorLayout() {
 
         {/* Center: Code Editor */}
         <main className="flex-1 overflow-hidden min-w-0">
-          <CodeEditor />
+          <ErrorBoundary>
+            <CodeEditor />
+          </ErrorBoundary>
         </main>
 
         {/* Center-right: Preview (optional) */}
@@ -127,7 +145,9 @@ function EditorLayout() {
               className="shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200"
               style={{ width: aiPanelWidth }}
             >
-              <ChatPanel />
+              <ErrorBoundary>
+                <ChatPanel />
+              </ErrorBoundary>
             </aside>
           </>
         )}
@@ -140,7 +160,9 @@ function EditorLayout() {
               className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
               style={{ width: aiPanelWidth }}
             >
-              <GitPanel />
+              <ErrorBoundary>
+                <GitPanel />
+              </ErrorBoundary>
             </aside>
           </>
         )}
@@ -163,10 +185,12 @@ function EditorLayout() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<ProjectSelector />} />
-      <Route path="/editor" element={<EditorLayout />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/" element={<ProjectSelector />} />
+        <Route path="/editor" element={<EditorLayout />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
