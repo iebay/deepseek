@@ -69,6 +69,12 @@ export function readFile(filePath: string): string {
   return fs.readFileSync(filePath, 'utf-8');
 }
 
+/**
+ * Writes content to a file, enforcing path safety and extension allowlist checks
+ * (consistent with readFile). This intentionally restricts writes to known safe
+ * file types. If AI needs to create a file with a new extension, add it to
+ * ALLOWED_EXTENSIONS in ignorePatterns.ts.
+ */
 export function writeFile(filePath: string, content: string): void {
   const allowedRoots = getAllowedRoots();
   if (!isPathSafe(filePath, allowedRoots)) {
