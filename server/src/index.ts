@@ -11,6 +11,7 @@ import templatesRouter from './routes/templates';
 import gitRouter from './routes/git';
 import memoryRouter from './routes/memory';
 import uploadRouter from './routes/upload';
+import agentRouter from './routes/agent';
 import { handleTerminalUpgrade } from './routes/terminal';
 import { analyzeProject } from './services/projectAnalyzer';
 import { getAllowedRoots, isPathSafe } from './utils/pathUtils';
@@ -45,6 +46,13 @@ const aiLimiter = rateLimit({
 });
 app.use('/api/ai/', aiLimiter);
 
+const agentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Agent 请求过于频繁，请稍后再试' },
+});
+app.use('/api/agent/', agentLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/files', filesRouter);
@@ -53,6 +61,7 @@ app.use('/api/templates', templatesRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/memory', memoryRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/agent', agentRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };

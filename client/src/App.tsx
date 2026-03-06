@@ -5,6 +5,7 @@ import TopBar from './components/layout/TopBar';
 import FileTree from './components/fileTree/FileTree';
 import CodeEditor from './components/editor/CodeEditor';
 import ChatPanel from './components/chat/ChatPanel';
+import AgentPanel from './components/agent/AgentPanel';
 import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
 import Toast from './components/ui/Toast';
@@ -55,7 +56,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
 function EditorLayout() {
   const {
-    showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal,
+    showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal, showAgentPanel,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
@@ -165,6 +166,21 @@ function EditorLayout() {
             >
               <ErrorBoundary>
                 <GitPanel />
+              </ErrorBoundary>
+            </aside>
+          </>
+        )}
+
+        {/* Right: Agent Panel */}
+        {showAgentPanel && (
+          <>
+            <ResizeDivider onResize={handleAIPanelResize} />
+            <aside
+              className="shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200"
+              style={{ width: aiPanelWidth }}
+            >
+              <ErrorBoundary>
+                <AgentPanel />
               </ErrorBoundary>
             </aside>
           </>
