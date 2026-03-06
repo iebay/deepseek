@@ -7,6 +7,7 @@ import type { ChatMessage, MultimodalContentPart, FileNode } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
 import ImageUpload, { type UploadedImage } from './ImageUpload';
+import ChatHistory, { ChatHistoryButton } from './ChatHistory';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -281,6 +282,7 @@ export default function ChatPanel() {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [elapsed, setElapsed] = useState<number>(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -451,45 +453,55 @@ export default function ChatPanel() {
   return (
     <div className="flex flex-col h-full bg-[#0d1117] relative">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#30363d] shrink-0 bg-[#161b22]">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gradient-to-br from-[#388bfd] to-[#58a6ff] rounded-lg flex items-center justify-center">
-            <Sparkles size={13} className="text-white" />
+      <div className="relative">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#30363d] shrink-0 bg-[#161b22]">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-gradient-to-br from-[#388bfd] to-[#58a6ff] rounded-lg flex items-center justify-center">
+              <Sparkles size={13} className="text-white" />
+            </div>
+            <span className="text-sm font-semibold text-[#e6edf3]">AI 助手</span>
+            {isAiLoading && (
+              <span className="text-[10px] text-[#388bfd] animate-pulse">
+                {elapsed > 0 ? `${elapsed}s` : '思考中...'}
+              </span>
+            )}
           </div>
-          <span className="text-sm font-semibold text-[#e6edf3]">AI 助手</span>
-          {isAiLoading && (
-            <span className="text-[10px] text-[#388bfd] animate-pulse">
-              {elapsed > 0 ? `${elapsed}s` : '思考中...'}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {isAiLoading && (
+          <div className="flex items-center gap-1">
+            <ChatHistoryButton
+              onClick={() => setShowHistoryPanel(v => !v)}
+              isOpen={showHistoryPanel}
+            />
+            {isAiLoading && (
+              <button
+                onClick={() => abortRef.current?.()}
+                className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
+                title="停止生成"
+              >
+                <StopCircle size={14} />
+              </button>
+            )}
+            {chatMessages.length > 0 && (
+              <button
+                onClick={() => exportChatAsMarkdown(chatMessages, currentProject?.name ?? '')}
+                className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+                title="导出对话"
+              >
+                <Download size={14} />
+              </button>
+            )}
             <button
-              onClick={() => abortRef.current?.()}
+              onClick={() => setShowClearConfirm(true)}
               className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
-              title="停止生成"
+              title="清空对话"
             >
-              <StopCircle size={14} />
+              <Trash2 size={14} />
             </button>
-          )}
-          {chatMessages.length > 0 && (
-            <button
-              onClick={() => exportChatAsMarkdown(chatMessages, currentProject?.name ?? '')}
-              className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
-              title="导出对话"
-            >
-              <Download size={14} />
-            </button>
-          )}
-          <button
-            onClick={() => setShowClearConfirm(true)}
-            className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
-            title="清空对话"
-          >
-            <Trash2 size={14} />
-          </button>
+          </div>
         </div>
+        <ChatHistory
+          isOpen={showHistoryPanel}
+          onClose={() => setShowHistoryPanel(false)}
+        />
       </div>
 
       {/* Context info bar */}

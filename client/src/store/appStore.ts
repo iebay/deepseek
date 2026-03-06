@@ -1,6 +1,56 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, devtools } from 'zustand/middleware';
 import type { FileNode, Tab, ChatMessage, ProjectInfo } from '../types';
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+const MAX_CHAT_SESSIONS = 50;
+const MAX_MESSAGE_CHARS = 100_000; // ~100KB for typical text
+
+function generateSessionId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function getSessionTitle(messages: ChatMessage[]): string {
+  const first = messages.find(m => m.role === 'user');
+  if (!first) return '新对话';
+  const text = typeof first.content === 'string'
+    ? first.content
+    : (first.content.find(p => p.type === 'text')?.text ?? '');
+  return text.slice(0, 30) || '新对话';
+}
+
+function truncateMessage(msg: ChatMessage): ChatMessage {
+  if (typeof msg.content !== 'string') return msg;
+  if (msg.content.length <= MAX_MESSAGE_CHARS) return msg;
+  return { ...msg, content: msg.content.slice(0, MAX_MESSAGE_CHARS) + '\n...[内容过长，已截断]' };
+}
+
+function findLastAssistantIndex(msgs: ChatMessage[]): number {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === 'assistant') return i;
+  }
+  return -1;
+}
+
+function createNewSession(): ChatSession {
+  return {
+    id: generateSessionId(),
+    title: '新对话',
+    messages: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
 
 interface AppState {
   fileTree: FileNode | null;
@@ -17,6 +67,8 @@ interface AppState {
   sidebarWidth: number;
   aiPanelWidth: number;
   chatMessages: ChatMessage[];
+  chatSessions: ChatSession[];
+  activeChatSessionId: string | null;
   isAiLoading: boolean;
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
   previewUrl: string;
@@ -47,121 +99,223 @@ interface AppState {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   clearToast: () => void;
   setPreviewUrl: (url: string) => void;
+  createChatSession: () => void;
+  switchChatSession: (id: string) => void;
+  deleteChatSession: (id: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
-  persist(
-    (set) => ({
-      fileTree: null,
-      currentProject: null,
-      openTabs: [],
-      activeTabPath: null,
-      selectedModel: 'deepseek-chat',
-      showPreview: false,
-      showSidebar: true,
-      showAIPanel: true,
-      showGitPanel: false,
-      showTerminal: false,
-      aiMode: 'chat' as const,
-      sidebarWidth: 240,
-      aiPanelWidth: 320,
-      chatMessages: [],
-      isAiLoading: false,
-      toast: null,
-      previewUrl: '',
+  devtools(
+    persist(
+      (set) => {
+        const initialSession = createNewSession();
+        return {
+          fileTree: null,
+          currentProject: null,
+          openTabs: [],
+          activeTabPath: null,
+          selectedModel: 'deepseek-chat',
+          showPreview: false,
+          showSidebar: true,
+          showAIPanel: true,
+          showGitPanel: false,
+          showTerminal: false,
+          aiMode: 'chat' as const,
+          sidebarWidth: 240,
+          aiPanelWidth: 320,
+          chatMessages: [],
+          chatSessions: [initialSession],
+          activeChatSessionId: initialSession.id,
+          isAiLoading: false,
+          toast: null,
+          previewUrl: '',
 
-      setFileTree: (tree) => set({ fileTree: tree }),
-      setCurrentProject: (project) => set({ currentProject: project }),
+          setFileTree: (tree) => set({ fileTree: tree }),
+          setCurrentProject: (project) => set({ currentProject: project }),
 
-      openTab: (tab) =>
-        set((state) => {
-          const exists = state.openTabs.find((t) => t.path === tab.path);
-          if (exists) return { activeTabPath: tab.path };
-          return { openTabs: [...state.openTabs, tab], activeTabPath: tab.path };
+          openTab: (tab) =>
+            set((state) => {
+              const exists = state.openTabs.find((t) => t.path === tab.path);
+              if (exists) return { activeTabPath: tab.path };
+              return { openTabs: [...state.openTabs, tab], activeTabPath: tab.path };
+            }),
+
+          closeTab: (path) =>
+            set((state) => {
+              const idx = state.openTabs.findIndex((t) => t.path === path);
+              const newTabs = state.openTabs.filter((t) => t.path !== path);
+              let newActive = state.activeTabPath;
+              if (state.activeTabPath === path) {
+                newActive = newTabs[Math.max(0, idx - 1)]?.path ?? null;
+              }
+              return { openTabs: newTabs, activeTabPath: newActive };
+            }),
+
+          closeOtherTabs: (path) =>
+            set((state) => ({
+              openTabs: state.openTabs.filter((t) => t.path === path),
+              activeTabPath: path,
+            })),
+
+          closeAllTabs: () => set({ openTabs: [], activeTabPath: null }),
+
+          setActiveTab: (path) => set({ activeTabPath: path }),
+
+          updateTabContent: (path, content, isDirty) =>
+            set((state) => ({
+              openTabs: state.openTabs.map((t) =>
+                t.path === path ? { ...t, content, isDirty } : t
+              ),
+            })),
+
+          reorderTabs: (fromIndex, toIndex) =>
+            set((state) => {
+              const newTabs = [...state.openTabs];
+              const [removed] = newTabs.splice(fromIndex, 1);
+              newTabs.splice(toIndex, 0, removed);
+              return { openTabs: newTabs };
+            }),
+
+          setSelectedModel: (model) => set({ selectedModel: model }),
+          togglePreview: () => set((state) => ({ showPreview: !state.showPreview })),
+          toggleSidebar: () => set((state) => ({ showSidebar: !state.showSidebar })),
+          toggleAIPanel: () => set((state) => ({ showAIPanel: !state.showAIPanel })),
+          toggleGitPanel: () => set((state) => ({ showGitPanel: !state.showGitPanel })),
+          toggleTerminal: () => set((state) => ({ showTerminal: !state.showTerminal })),
+          setAiMode: (mode) => set({ aiMode: mode }),
+          activateAgentMode: () => set({ aiMode: 'agent', showAIPanel: true }),
+          setSidebarWidth: (width) => set({ sidebarWidth: width }),
+          setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
+
+          addChatMessage: (message) =>
+            set((state) => {
+              const safeMsg = truncateMessage(message);
+              const newMessages = [...state.chatMessages, safeMsg];
+              const updatedSessions = state.chatSessions.map(s =>
+                s.id === state.activeChatSessionId
+                  ? {
+                      ...s,
+                      messages: newMessages,
+                      title: getSessionTitle(newMessages),
+                      updatedAt: Date.now(),
+                    }
+                  : s
+              );
+              return { chatMessages: newMessages, chatSessions: updatedSessions };
+            }),
+
+          updateLastAssistantMessage: (content) =>
+            set((state) => {
+              const msgs = [...state.chatMessages];
+              const lastIdx = findLastAssistantIndex(msgs);
+              if (lastIdx >= 0) {
+                msgs[lastIdx] = { ...msgs[lastIdx], content };
+              }
+              const updatedSessions = state.chatSessions.map(s =>
+                s.id === state.activeChatSessionId
+                  ? { ...s, messages: msgs, updatedAt: Date.now() }
+                  : s
+              );
+              return { chatMessages: msgs, chatSessions: updatedSessions };
+            }),
+
+          clearChat: () =>
+            set((state) => {
+              const updatedSessions = state.chatSessions.map(s =>
+                s.id === state.activeChatSessionId
+                  ? { ...s, messages: [], title: '新对话', updatedAt: Date.now() }
+                  : s
+              );
+              return { chatMessages: [], chatSessions: updatedSessions };
+            }),
+
+          setAiLoading: (loading) => set({ isAiLoading: loading }),
+
+          showToast: (message, type = 'info') =>
+            set({ toast: { message, type } }),
+          clearToast: () => set({ toast: null }),
+          setPreviewUrl: (url) => set({ previewUrl: url }),
+
+          createChatSession: () =>
+            set((state) => {
+              const newSession = createNewSession();
+              let sessions = [newSession, ...state.chatSessions];
+              // Enforce maximum number of sessions
+              if (sessions.length > MAX_CHAT_SESSIONS) {
+                sessions = sessions.slice(0, MAX_CHAT_SESSIONS);
+              }
+              return {
+                chatSessions: sessions,
+                activeChatSessionId: newSession.id,
+                chatMessages: [],
+              };
+            }),
+
+          switchChatSession: (id) =>
+            set((state) => {
+              const session = state.chatSessions.find(s => s.id === id);
+              if (!session) return {};
+              return {
+                activeChatSessionId: id,
+                chatMessages: session.messages,
+              };
+            }),
+
+          deleteChatSession: (id) =>
+            set((state) => {
+              const remaining = state.chatSessions.filter(s => s.id !== id);
+              if (remaining.length === 0) {
+                const newSession = createNewSession();
+                return {
+                  chatSessions: [newSession],
+                  activeChatSessionId: newSession.id,
+                  chatMessages: [],
+                };
+              }
+              const newActiveId = state.activeChatSessionId === id
+                ? remaining[0].id
+                : state.activeChatSessionId;
+              const activeSession = remaining.find(s => s.id === newActiveId);
+              return {
+                chatSessions: remaining,
+                activeChatSessionId: newActiveId,
+                chatMessages: activeSession?.messages ?? [],
+              };
+            }),
+        };
+      },
+      {
+        name: 'deepseek-app-store',
+        storage: createJSONStorage(() => localStorage),
+        partialize: (state) => ({
+          chatSessions: state.chatSessions,
+          activeChatSessionId: state.activeChatSessionId,
+          selectedModel: state.selectedModel,
+          aiMode: state.aiMode,
         }),
-
-      closeTab: (path) =>
-        set((state) => {
-          const idx = state.openTabs.findIndex((t) => t.path === path);
-          const newTabs = state.openTabs.filter((t) => t.path !== path);
-          let newActive = state.activeTabPath;
-          if (state.activeTabPath === path) {
-            newActive = newTabs[Math.max(0, idx - 1)]?.path ?? null;
+        onRehydrateStorage: () => (state) => {
+          if (!state) return;
+          if (state.chatSessions.length === 0) {
+            // Ensure there is always at least one session
+            const fresh = createNewSession();
+            state.chatSessions = [fresh];
+            state.activeChatSessionId = fresh.id;
+            state.chatMessages = [];
+            return;
           }
-          return { openTabs: newTabs, activeTabPath: newActive };
-        }),
-
-      closeOtherTabs: (path) =>
-        set((state) => ({
-          openTabs: state.openTabs.filter((t) => t.path === path),
-          activeTabPath: path,
-        })),
-
-      closeAllTabs: () => set({ openTabs: [], activeTabPath: null }),
-
-      setActiveTab: (path) => set({ activeTabPath: path }),
-
-      updateTabContent: (path, content, isDirty) =>
-        set((state) => ({
-          openTabs: state.openTabs.map((t) =>
-            t.path === path ? { ...t, content, isDirty } : t
-          ),
-        })),
-
-      reorderTabs: (fromIndex, toIndex) =>
-        set((state) => {
-          const newTabs = [...state.openTabs];
-          const [removed] = newTabs.splice(fromIndex, 1);
-          newTabs.splice(toIndex, 0, removed);
-          return { openTabs: newTabs };
-        }),
-
-      setSelectedModel: (model) => set({ selectedModel: model }),
-      togglePreview: () => set((state) => ({ showPreview: !state.showPreview })),
-      toggleSidebar: () => set((state) => ({ showSidebar: !state.showSidebar })),
-      toggleAIPanel: () => set((state) => ({ showAIPanel: !state.showAIPanel })),
-      toggleGitPanel: () => set((state) => ({ showGitPanel: !state.showGitPanel })),
-      toggleTerminal: () => set((state) => ({ showTerminal: !state.showTerminal })),
-      setAiMode: (mode) => set({ aiMode: mode }),
-      activateAgentMode: () => set((state) => ({ aiMode: 'agent', showAIPanel: true })),
-      setSidebarWidth: (width) => set({ sidebarWidth: width }),
-      setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
-
-      addChatMessage: (message) =>
-        set((state) => ({ chatMessages: [...state.chatMessages, message] })),
-
-      updateLastAssistantMessage: (content) =>
-        set((state) => {
-          const msgs = [...state.chatMessages];
-          // Use manual loop for ES2020 compatibility (findLastIndex requires ES2023)
-          let lastIdx = -1;
-          for (let i = msgs.length - 1; i >= 0; i--) {
-            if (msgs[i].role === 'assistant') { lastIdx = i; break; }
+          // Sync chatMessages from the active session after hydration
+          const activeSession = state.chatSessions.find(
+            s => s.id === state.activeChatSessionId
+          );
+          if (activeSession) {
+            state.chatMessages = activeSession.messages;
+          } else {
+            state.activeChatSessionId = state.chatSessions[0].id;
+            state.chatMessages = state.chatSessions[0].messages;
           }
-          if (lastIdx >= 0) {
-            msgs[lastIdx] = { ...msgs[lastIdx], content };
-          }
-          return { chatMessages: msgs };
-        }),
-
-      clearChat: () => set({ chatMessages: [] }),
-      setAiLoading: (loading) => set({ isAiLoading: loading }),
-
-      showToast: (message, type = 'info') =>
-        set({ toast: { message, type } }),
-      clearToast: () => set({ toast: null }),
-      setPreviewUrl: (url) => set({ previewUrl: url }),
-    }),
-    {
-      name: 'deepseek-app-settings',
-      partialize: (state) => ({
-        selectedModel: state.selectedModel,
-        showPreview: state.showPreview,
-        showSidebar: state.showSidebar,
-        showAIPanel: state.showAIPanel,
-        sidebarWidth: state.sidebarWidth,
-        aiPanelWidth: state.aiPanelWidth,
-      }),
-    }
+        },
+      }
+    ),
+    { name: 'deepseek-app' }
   )
 );
