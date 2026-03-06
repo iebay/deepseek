@@ -1,5 +1,5 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import { MODELS } from '../../constants/models';
@@ -14,6 +14,7 @@ export default function TopBar() {
     toggleAIPanel, showAIPanel,
     toggleGitPanel, showGitPanel,
     toggleTerminal, showTerminal,
+    aiMode, activateAgentMode,
   } = useAppStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -38,6 +39,10 @@ export default function TopBar() {
       setIsFullscreen(false);
     }
   }
+
+  const handleActivateAgent = useCallback(() => {
+    activateAgentMode();
+  }, [activateAgentMode]);
 
   return (
     <>
@@ -105,6 +110,13 @@ export default function TopBar() {
             title={`${showAIPanel ? '隐藏' : '显示'} AI 面板`}
           >
             <PanelRight size={15} />
+          </button>
+          <button
+            onClick={handleActivateAgent}
+            className={`p-1.5 rounded-lg transition-colors ${showAIPanel && aiMode === 'agent' ? 'text-[#bc8cff] bg-[#bc8cff]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+            title="Agent 模式"
+          >
+            <Bot size={15} />
           </button>
           <button
             onClick={toggleGitPanel}

@@ -37,6 +37,7 @@ interface AppState {
   toggleGitPanel: () => void;
   toggleTerminal: () => void;
   setAiMode: (mode: 'chat' | 'agent') => void;
+  activateAgentMode: () => void;
   setSidebarWidth: (width: number) => void;
   setAIPanelWidth: (width: number) => void;
   addChatMessage: (message: ChatMessage) => void;
@@ -122,6 +123,7 @@ export const useAppStore = create<AppState>()(
       toggleGitPanel: () => set((state) => ({ showGitPanel: !state.showGitPanel })),
       toggleTerminal: () => set((state) => ({ showTerminal: !state.showTerminal })),
       setAiMode: (mode) => set({ aiMode: mode }),
+      activateAgentMode: () => set((state) => ({ aiMode: 'agent', showAIPanel: true })),
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
       setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
 
