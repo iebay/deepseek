@@ -11,6 +11,7 @@ import Toast from './components/ui/Toast';
 import OfflineIndicator from './components/ui/OfflineIndicator';
 import CommandPalette from './components/ui/CommandPalette';
 import Terminal from './components/terminal/Terminal';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import { useAppStore } from './store/appStore';
 import { useIsMobile } from './hooks/useMediaQuery';
 
@@ -66,6 +67,19 @@ function EditorLayout() {
   const isMobile = useIsMobile();
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
 
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const hasDirtyTabs = openTabs.some(t => t.isDirty);
+      if (hasDirtyTabs) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [openTabs]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -104,7 +118,9 @@ function EditorLayout() {
               }`}
               style={{ width: isMobile ? Math.min(sidebarWidth, window.innerWidth * 0.8) : sidebarWidth }}
             >
-              <FileTree />
+              <ErrorBoundary>
+                <FileTree />
+              </ErrorBoundary>
             </aside>
             {isMobile && (
               <div
@@ -121,7 +137,9 @@ function EditorLayout() {
           <div className="flex flex-1 overflow-hidden">
             {/* Center: Code Editor */}
             <main className="flex-1 overflow-hidden min-w-0">
-              <CodeEditor />
+              <ErrorBoundary>
+                <CodeEditor />
+              </ErrorBoundary>
             </main>
 
             {/* Center-right: Preview (optional, hidden on mobile) */}
@@ -152,7 +170,9 @@ function EditorLayout() {
                   }`}
                   style={isMobile ? undefined : { width: aiPanelWidth }}
                 >
-                  <ChatPanel />
+                  <ErrorBoundary>
+                    <ChatPanel />
+                  </ErrorBoundary>
                 </aside>
                 {isMobile && (
                   <div
@@ -171,7 +191,9 @@ function EditorLayout() {
                   className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
                   style={{ width: aiPanelWidth }}
                 >
-                  <GitPanel />
+                  <ErrorBoundary>
+                    <GitPanel />
+                  </ErrorBoundary>
                 </aside>
               </>
             )}
@@ -204,10 +226,12 @@ function EditorLayout() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<ProjectSelector />} />
-      <Route path="/editor" element={<EditorLayout />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/" element={<ProjectSelector />} />
+        <Route path="/editor" element={<EditorLayout />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }

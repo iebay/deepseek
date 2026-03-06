@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import filesRouter from './routes/files';
 import aiRouter from './routes/ai';
 import templatesRouter from './routes/templates';
@@ -13,7 +15,32 @@ import { setupTerminalWebSocket } from './routes/terminal';
 const app = express();
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
-app.use(cors());
+if (!process.env.ALLOWED_ROOT_PATHS && !process.env.ALLOWED_ROOTS) {
+  console.warn('[WARNING] ALLOWED_ROOT_PATHS is not set. All file system access will be denied.');
+}
+
+app.use(helmet());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true,
+}));
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '请求过于频繁，请稍后再试' },
+});
+app.use('/api/', generalLimiter);
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'AI 请求过于频繁，请稍后再试' },
+});
+app.use('/api/ai/', aiLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/files', filesRouter);
