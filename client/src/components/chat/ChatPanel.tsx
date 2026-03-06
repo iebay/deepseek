@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Trash2, Copy, Check, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat } from '../../api/aiApi';
 import { batchWriteFiles } from '../../api/filesApi';
 import type { ChatMessage } from '../../types';
+import SuggestionCards from './SuggestionCards';
+import DiffCard from './DiffCard';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -49,29 +51,58 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
   );
 }
 
-function renderContent(content: string) {
+function renderContent(content: string, onApplyFile?: (f: { path: string; content: string }) => Promise<void>, onApplyAll?: () => Promise<void>, appliedFiles?: Set<string>) {
   const parts: React.ReactNode[] = [];
   const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
   let match;
+  let partIndex = 0;
 
   while ((match = codeRegex.exec(content)) !== null) {
     if (match.index > lastIndex) {
       parts.push(
-        <span key={lastIndex} className="whitespace-pre-wrap">
+        <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
           {renderInline(content.slice(lastIndex, match.index))}
         </span>
       );
     }
+
+    const lang = match[1];
+    const code = match[2].trim();
+
+    if (lang === 'json' && onApplyFile && onApplyAll && appliedFiles) {
+      try {
+        const parsed = JSON.parse(code) as ParsedAIResponse;
+        if (parsed.files && Array.isArray(parsed.files) && parsed.files.length > 0) {
+          const allApplied = parsed.files.every(f => appliedFiles.has(f.path));
+          parts.push(
+            <DiffCard
+              key={`diff-${partIndex++}`}
+              files={parsed.files}
+              appliedFiles={appliedFiles}
+              onApplyFile={onApplyFile}
+              onApplyAll={onApplyAll}
+              allApplied={allApplied}
+            />
+          );
+          lastIndex = match.index + match[0].length;
+          continue;
+        }
+      } catch {
+        // not a valid file changes JSON, render as code block
+        console.debug('JSON code block is not a file changes response');
+      }
+    }
+
     parts.push(
-      <CodeBlock key={match.index} language={match[1]} code={match[2].trim()} />
+      <CodeBlock key={`code-${partIndex++}`} language={lang} code={code} />
     );
     lastIndex = match.index + match[0].length;
   }
 
   if (lastIndex < content.length) {
     parts.push(
-      <span key={lastIndex} className="whitespace-pre-wrap">
+      <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
         {renderInline(content.slice(lastIndex))}
       </span>
     );
@@ -81,13 +112,11 @@ function renderContent(content: string) {
 }
 
 function renderInline(text: string): React.ReactNode {
-  // Bold: **text**
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={i} className="font-semibold text-[#e6edf3]">{part.slice(2, -2)}</strong>;
     }
-    // Inline code: `text`
     const codeParts = part.split(/(`[^`]+`)/g);
     return codeParts.map((cp, j) => {
       if (cp.startsWith('`') && cp.endsWith('`')) {
@@ -108,18 +137,41 @@ function TypingDots() {
   );
 }
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function formatTime(ts?: number): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function MessageBubble({
+  msg,
+  onApplyFile,
+  onApplyAll,
+  appliedFiles,
+}: {
+  msg: ChatMessage;
+  onApplyFile?: (f: { path: string; content: string }) => Promise<void>;
+  onApplyAll?: () => Promise<void>;
+  appliedFiles?: Set<string>;
+}) {
   const isUser = msg.role === 'user';
   return (
     <div className={`flex gap-2.5 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[#388bfd]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
         {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
-      <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[#388bfd]/20 text-[#e6edf3] rounded-tr-sm' : 'bg-[#161b22] text-[#e6edf3] border border-[#30363d] rounded-tl-sm'}`}>
-        {isUser ? (
-          <span className="whitespace-pre-wrap">{msg.content}</span>
-        ) : (
-          <div className="leading-relaxed">{renderContent(msg.content)}</div>
+      <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+        <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[#388bfd]/20 text-[#e6edf3] rounded-tr-sm' : 'bg-[#161b22] text-[#e6edf3] border border-[#30363d] rounded-tl-sm'}`}>
+          {isUser ? (
+            <span className="whitespace-pre-wrap">{msg.content}</span>
+          ) : (
+            <div className="leading-relaxed">
+              {renderContent(msg.content, onApplyFile, onApplyAll, appliedFiles)}
+            </div>
+          )}
+        </div>
+        {msg.timestamp && (
+          <span className="text-[10px] text-[#6e7681] px-1">{formatTime(msg.timestamp)}</span>
         )}
       </div>
     </div>
@@ -135,8 +187,9 @@ export default function ChatPanel() {
   } = useAppStore();
 
   const [input, setInput] = useState('');
-  const [applyStatus, setApplyStatus] = useState<string>('');
   const [elapsed, setElapsed] = useState<number>(0);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
@@ -147,7 +200,7 @@ export default function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  // Auto-resize textarea
+  // Auto-resize textarea (up to 5 lines)
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -184,15 +237,15 @@ export default function ChatPanel() {
     return walk(fileTree, 0);
   }
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || isAiLoading) return;
+  async function handleSend(text?: string) {
+    const msgText = (text ?? input).trim();
+    if (!msgText || isAiLoading) return;
     setInput('');
 
-    const userMsg: ChatMessage = { role: 'user', content: text };
+    const userMsg: ChatMessage = { role: 'user', content: msgText, timestamp: Date.now() };
     addChatMessage(userMsg);
 
-    const assistantMsg: ChatMessage = { role: 'assistant', content: '' };
+    const assistantMsg: ChatMessage = { role: 'assistant', content: '', timestamp: Date.now() };
     addChatMessage(assistantMsg);
     setAiLoading(true);
     setElapsed(0);
@@ -228,34 +281,45 @@ export default function ChatPanel() {
     });
   }
 
-  async function handleApplyChanges(content: string) {
+  async function handleApplyFile(file: { path: string; content: string }) {
     if (!currentProject) {
       showToast('请先打开一个项目', 'error');
       return;
     }
-    const parsed = tryParseFileChanges(content);
+    try {
+      await batchWriteFiles([file], currentProject.path);
+      setAppliedFiles(prev => new Set([...prev, file.path]));
+      showToast(`✓ 已应用 ${file.path.split('/').pop()}`, 'success');
+    } catch (e) {
+      showToast(`应用失败: ${e instanceof Error ? e.message : String(e)}`, 'error');
+    }
+  }
+
+  async function handleApplyAll() {
+    if (!currentProject) {
+      showToast('请先打开一个项目', 'error');
+      return;
+    }
+    const lastMsg = chatMessages[chatMessages.length - 1];
+    const parsed = lastMsg ? tryParseFileChanges(lastMsg.content) : null;
     if (!parsed?.files?.length) {
       showToast('未找到可应用的文件修改', 'error');
       return;
     }
     try {
-      setApplyStatus('正在应用修改...');
       await batchWriteFiles(parsed.files, currentProject.path);
+      setAppliedFiles(new Set(parsed.files.map(f => f.path)));
       showToast(`✓ 已应用 ${parsed.files.length} 个文件修改`, 'success');
-      setApplyStatus('');
     } catch (e) {
-      const msg = `应用失败: ${e instanceof Error ? e.message : String(e)}`;
-      showToast(msg, 'error');
-      setApplyStatus('');
+      showToast(`应用失败: ${e instanceof Error ? e.message : String(e)}`, 'error');
     }
   }
 
-  const lastMsg = chatMessages[chatMessages.length - 1];
-  const canApply = lastMsg?.role === 'assistant' && tryParseFileChanges(lastMsg.content) !== null;
+  const activeTab = openTabs.find(t => t.path === activeTabPath);
   const isTyping = isAiLoading && chatMessages[chatMessages.length - 1]?.content === '';
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117]">
+    <div className="flex flex-col h-full bg-[#0d1117] relative">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#30363d] shrink-0 bg-[#161b22]">
         <div className="flex items-center gap-2">
@@ -270,7 +334,7 @@ export default function ChatPanel() {
           )}
         </div>
         <button
-          onClick={() => { clearChat(); showToast('对话已清空', 'info'); }}
+          onClick={() => setShowClearConfirm(true)}
           className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
           title="清空对话"
         >
@@ -278,55 +342,57 @@ export default function ChatPanel() {
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3">
-        {chatMessages.length === 0 ? (
-          <div className="text-center text-[#6e7681] text-sm mt-10 px-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-[#388bfd]/20 to-[#238636]/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles size={24} className="text-[#388bfd]" />
-            </div>
-            <p className="font-medium text-[#8b949e] mb-2">向 DeepSeek AI 描述需求</p>
-            <p className="text-xs text-[#6e7681] leading-relaxed">AI 会分析项目结构并生成代码修改方案</p>
-            <div className="mt-5 space-y-2 text-left">
-              {['添加登录表单验证', '优化列表渲染性能', '添加 TypeScript 类型定义'].map(hint => (
-                <button
-                  key={hint}
-                  onClick={() => setInput(hint)}
-                  className="w-full text-left px-3 py-2 bg-[#161b22] border border-[#30363d] rounded-lg text-xs text-[#8b949e] hover:text-[#e6edf3] hover:border-[#388bfd]/40 transition-colors"
-                >
-                  {hint}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          chatMessages.map((msg, i) => <MessageBubble key={i} msg={msg} />)
-        )}
-        {isTyping && (
-          <div className="flex gap-2.5 mb-4">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#238636] to-[#2ea043] flex items-center justify-center shrink-0">
-              <Bot size={13} />
-            </div>
-            <div className="bg-[#161b22] border border-[#30363d] rounded-xl rounded-tl-sm px-3 py-2">
-              <TypingDots />
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Apply button */}
-      {canApply && (
-        <div className="px-3 py-2 border-t border-[#30363d] shrink-0">
-          <button
-            onClick={() => handleApplyChanges(lastMsg.content)}
-            className="w-full py-2 bg-[#238636] hover:bg-[#2ea043] text-white text-sm rounded-lg transition-colors font-medium"
-          >
-            应用 AI 修改到项目
-          </button>
-          {applyStatus && <p className="text-xs text-[#8b949e] mt-1 text-center">{applyStatus}</p>}
+      {/* Context info bar */}
+      {(activeTab || currentProject) && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#30363d] bg-[#161b22]/50 shrink-0 overflow-x-auto">
+          {activeTab && (
+            <span className="flex items-center gap-1 text-[10px] text-[#8b949e] whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#388bfd]" />
+              {activeTab.path.split('/').pop()}
+            </span>
+          )}
+          {currentProject?.techStack && currentProject.techStack.length > 0 && (
+            <>
+              <span className="text-[#30363d]">·</span>
+              <span className="text-[10px] text-[#8b949e] whitespace-nowrap">
+                {currentProject.techStack.slice(0, 3).join(' · ')}
+              </span>
+            </>
+          )}
+          <span className="text-[#30363d]">·</span>
+          <span className="text-[10px] text-[#6e7681] whitespace-nowrap">{selectedModel}</span>
         </div>
       )}
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto">
+        {chatMessages.length === 0 ? (
+          <SuggestionCards onSelect={(prompt) => handleSend(prompt)} />
+        ) : (
+          <div className="p-3">
+            {chatMessages.map((msg, i) => (
+              <MessageBubble
+                key={i}
+                msg={msg}
+                onApplyFile={handleApplyFile}
+                onApplyAll={handleApplyAll}
+                appliedFiles={appliedFiles}
+              />
+            ))}
+            {isTyping && (
+              <div className="flex gap-2.5 mb-4">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#238636] to-[#2ea043] flex items-center justify-center shrink-0">
+                  <Bot size={13} />
+                </div>
+                <div className="bg-[#161b22] border border-[#30363d] rounded-xl rounded-tl-sm px-3 py-2">
+                  <TypingDots />
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
 
       {/* Input */}
       <div className="px-3 py-2.5 border-t border-[#30363d] shrink-0">
@@ -347,7 +413,7 @@ export default function ChatPanel() {
             disabled={isAiLoading}
           />
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || isAiLoading}
             className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#388bfd] hover:bg-[#58a6ff] disabled:bg-[#21262d] disabled:text-[#6e7681] text-white rounded-xl transition-colors"
           >
@@ -356,6 +422,38 @@ export default function ChatPanel() {
         </div>
         <p className="text-[10px] text-[#6e7681] mt-1.5">Enter 发送 · Shift+Enter 换行</p>
       </div>
+
+      {/* Clear confirm dialog */}
+      {showClearConfirm && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-xl mx-4 max-w-xs w-full">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle size={16} className="text-[#d29922]" />
+              <span className="text-sm font-semibold text-[#e6edf3]">清空对话</span>
+            </div>
+            <p className="text-xs text-[#8b949e] mb-4">确定要清空所有对话记录吗？此操作不可撤销。</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-2 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] text-xs rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  clearChat();
+                  setAppliedFiles(new Set());
+                  setShowClearConfirm(false);
+                  showToast('对话已清空', 'info');
+                }}
+                className="flex-1 py-2 bg-[#f85149] hover:bg-[#ff7b72] text-white text-xs rounded-lg transition-colors"
+              >
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
