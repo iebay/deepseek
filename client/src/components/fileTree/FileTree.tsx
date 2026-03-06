@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, FileCode, FileImage, FileArchive, FileJson, FileText, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X, Upload, FilePlus, FolderPlus, Pencil, Trash2, Copy } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { fetchFileContent, uploadZip, fetchFileTree, createFileOrDir, renameFile, deleteFile } from '../../api/filesApi';
+import { fetchFileContent, uploadZip, uploadFiles, fetchFileTree, createFileOrDir, renameFile, deleteFile } from '../../api/filesApi';
 import type { FileNode } from '../../types';
 import { FileTreeSkeleton } from '../ui/Skeleton';
 import ContextMenu, { type ContextMenuItem } from '../ui/ContextMenu';
@@ -240,6 +240,8 @@ export default function FileTree() {
   const [inlineCreate, setInlineCreate] = useState<{ parentPath: string; type: 'file' | 'directory' } | null>(null);
   // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string } | null>(null);
+  // Drag-over state for file drop
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Initialize with first 2 levels expanded
   useEffect(() => {
@@ -407,6 +409,46 @@ export default function FileTree() {
     }
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }
+
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (!currentProject) {
+      showToast('请先打开一个项目', 'error');
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    setLoading(true);
+    try {
+      await uploadFiles(files, currentProject.path);
+      const tree = await fetchFileTree(currentProject.path);
+      setFileTree(tree);
+      showToast(`成功上传 ${files.length} 个文件`, 'success');
+    } catch (err) {
+      showToast(`上传失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (loading) {
     return <FileTreeSkeleton />;
   }
@@ -421,7 +463,20 @@ export default function FileTree() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div
+      className="h-full flex flex-col overflow-hidden relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#0d1117]/80 border-2 border-dashed border-[#388bfd] rounded-lg pointer-events-none">
+          <div className="text-center">
+            <Upload size={32} className="text-[#388bfd] mx-auto mb-2" />
+            <p className="text-sm text-[#388bfd]">拖拽文件到此处上传</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="px-3 py-2 border-b border-[#30363d] shrink-0">
         <div className="flex items-center justify-between mb-1.5">
