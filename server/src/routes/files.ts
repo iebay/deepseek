@@ -1,116 +1,73 @@
 import { Router, Request, Response } from 'express';
+import { getFileTree, readFile, writeFile, backupFile, restoreBackup } from '../services/fileService';
 import path from 'path';
-import fs from 'fs';
-import { buildFileTree, readFile, writeFile } from '../services/fileService';
-import { isPathSafe, getAllowedRoots, isTextFile, isFileSizeOk } from '../utils/pathUtils';
 
 const router = Router();
 
-// GET /api/files/tree?root=C:\xxx\project
 router.get('/tree', (req: Request, res: Response) => {
   const root = req.query.root as string;
-  if (!root) return res.status(400).json({ error: '缺少 root 参数' });
-
-  const normalized = path.normalize(root);
-  if (!fs.existsSync(normalized)) {
-    return res.status(404).json({ error: `路径不存在：${normalized}` });
-  }
-  if (!fs.statSync(normalized).isDirectory()) {
-    return res.status(400).json({ error: '路径必须是一个目录' });
-  }
-
-  const allowedRoots = getAllowedRoots();
-  if (!isPathSafe(normalized, allowedRoots)) {
-    return res.status(403).json({ error: '路径不在允许的范围内' });
-  }
-
+  if (!root) return res.status(400).json({ error: 'root query param required' });
   try {
-    const tree = buildFileTree(normalized, normalized);
-    return res.json({ tree, root: normalized });
+    const tree = getFileTree(root);
+    res.json(tree);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return res.status(500).json({ error: message });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
   }
 });
 
-// GET /api/files/content?path=C:\xxx\file.ts
 router.get('/content', (req: Request, res: Response) => {
   const filePath = req.query.path as string;
-  if (!filePath) return res.status(400).json({ error: '缺少 path 参数' });
-
-  const normalized = path.normalize(filePath);
-  const allowedRoots = getAllowedRoots();
-  if (!isPathSafe(normalized, allowedRoots)) {
-    return res.status(403).json({ error: '路径不在允许的范围内' });
-  }
-  if (!fs.existsSync(normalized)) {
-    return res.status(404).json({ error: `文件不存在：${normalized}` });
-  }
-  if (!isTextFile(normalized)) {
-    return res.status(400).json({ error: '不支持读取二进制文件' });
-  }
-  if (!isFileSizeOk(normalized)) {
-    return res.status(400).json({ error: '文件过大（超过 2MB），无法读取' });
-  }
-
+  if (!filePath) return res.status(400).json({ error: 'path query param required' });
   try {
-    const content = readFile(normalized);
-    const ext = path.extname(normalized).toLowerCase().slice(1);
-    return res.json({ content, path: normalized, extension: ext });
+    const content = readFile(filePath);
+    res.json({ content });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return res.status(500).json({ error: message });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
   }
 });
 
-// POST /api/files/write  { path, content }
 router.post('/write', (req: Request, res: Response) => {
-  const { path: filePath, content } = req.body;
-  if (!filePath || content === undefined) {
-    return res.status(400).json({ error: '缺少 path 或 content 参数' });
-  }
-
-  const normalized = path.normalize(filePath);
-  const allowedRoots = getAllowedRoots();
-  if (!isPathSafe(normalized, allowedRoots)) {
-    return res.status(403).json({ error: '路径不在允许的范围内' });
-  }
-
+  const { path: filePath, content } = req.body as { path: string; content: string };
+  if (!filePath || content === undefined) return res.status(400).json({ error: 'path and content required' });
   try {
-    writeFile(normalized, content);
-    return res.json({ success: true, path: normalized });
+    writeFile(filePath, content);
+    res.json({ success: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '未知错误';
-    return res.status(500).json({ error: message });
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
   }
 });
 
-// POST /api/files/batch-write  { files: [{path, content}] }
 router.post('/batch-write', (req: Request, res: Response) => {
-  const { files } = req.body as { files: { path: string; content: string }[] };
-  if (!Array.isArray(files) || files.length === 0) {
-    return res.status(400).json({ error: '缺少 files 数组' });
-  }
-
-  const allowedRoots = getAllowedRoots();
-  const results: { path: string; success: boolean; error?: string }[] = [];
-
-  for (const file of files) {
-    const normalized = path.normalize(file.path);
-    if (!isPathSafe(normalized, allowedRoots)) {
-      results.push({ path: normalized, success: false, error: '路径不在允许的范围内' });
-      continue;
+  const { files, projectRoot } = req.body as { files: { path: string; content: string }[]; projectRoot: string };
+  if (!files || !Array.isArray(files)) return res.status(400).json({ error: 'files array required' });
+  try {
+    const results: { path: string; backupPath: string }[] = [];
+    for (const f of files) {
+      const absPath = path.isAbsolute(f.path) ? f.path : path.join(projectRoot, f.path);
+      const backupPath = backupFile(absPath);
+      writeFile(absPath, f.content);
+      results.push({ path: absPath, backupPath });
     }
-    try {
-      writeFile(normalized, file.content);
-      results.push({ path: normalized, success: true });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '未知错误';
-      results.push({ path: normalized, success: false, error: message });
-    }
+    res.json({ success: true, results });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
   }
+});
 
-  return res.json({ results });
+router.post('/restore', (req: Request, res: Response) => {
+  const { backupPath, originalPath } = req.body as { backupPath: string; originalPath: string };
+  if (!backupPath || !originalPath) return res.status(400).json({ error: 'backupPath and originalPath required' });
+  try {
+    restoreBackup(backupPath, originalPath);
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
 });
 
 export default router;
