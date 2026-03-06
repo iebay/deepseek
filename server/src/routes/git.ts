@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { spawnSync } from 'child_process';
-import { getAllowedRoots, isPathSafe } from '../utils/pathUtils';
+import { getAllowedRoots, isPathSafe, validateRootParam } from '../utils/pathUtils';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -39,18 +39,6 @@ function gitOk(args: string[], cwd: string, timeout = 15000, env?: NodeJS.Proces
   return r.stdout;
 }
 
-function validateRoot(root: string | undefined, res: Response): string | null {
-  if (!root) {
-    res.status(400).json({ error: 'root is required' });
-    return null;
-  }
-  if (!isPathSafe(root, getAllowedRoots())) {
-    res.status(403).json({ error: 'Access denied: path is outside allowed roots' });
-    return null;
-  }
-  return root;
-}
-
 function isInsideRepo(cwd: string): boolean {
   const r = runGit(['rev-parse', '--is-inside-work-tree'], cwd);
   return r.status === 0;
@@ -58,7 +46,7 @@ function isInsideRepo(cwd: string): boolean {
 
 // GET /api/git/status?root=<projectPath>
 router.get('/status', (req: Request, res: Response) => {
-  const root = validateRoot(req.query.root as string, res);
+  const root = validateRootParam(req.query.root as string, res);
   if (!root) return;
 
   try {
@@ -103,7 +91,7 @@ router.get('/status', (req: Request, res: Response) => {
 
 // GET /api/git/log?root=<projectPath>&limit=20
 router.get('/log', (req: Request, res: Response) => {
-  const root = validateRoot(req.query.root as string, res);
+  const root = validateRootParam(req.query.root as string, res);
   if (!root) return;
 
   const limit = Math.min(Math.max(1, parseInt((req.query.limit as string) || '20', 10)), 100);
@@ -140,7 +128,7 @@ router.post('/commit', (req: Request, res: Response) => {
     files?: string[];
   };
 
-  const validRoot = validateRoot(root, res);
+  const validRoot = validateRootParam(root, res);
   if (!validRoot) return;
 
   if (!message) {
@@ -173,7 +161,7 @@ router.post('/push', (req: Request, res: Response) => {
     branch?: string;
   };
 
-  const validRoot = validateRoot(root, res);
+  const validRoot = validateRootParam(root, res);
   if (!validRoot) return;
 
   try {
@@ -224,7 +212,7 @@ router.post('/push', (req: Request, res: Response) => {
 router.post('/init', (req: Request, res: Response) => {
   const { root } = req.body as { root: string };
 
-  const validRoot = validateRoot(root, res);
+  const validRoot = validateRootParam(root, res);
   if (!validRoot) return;
 
   try {
@@ -240,7 +228,7 @@ router.post('/init', (req: Request, res: Response) => {
 router.post('/remote', (req: Request, res: Response) => {
   const { root, url } = req.body as { root: string; url: string };
 
-  const validRoot = validateRoot(root, res);
+  const validRoot = validateRootParam(root, res);
   if (!validRoot) return;
 
   if (!url) {
