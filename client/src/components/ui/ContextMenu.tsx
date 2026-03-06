@@ -50,7 +50,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
     >
       {items.map((item, i) => (
         <button
-          key={i}
+          key={item.label}
           onClick={() => { item.onClick(); onClose(); }}
           className={`flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs transition-colors ${
             item.danger

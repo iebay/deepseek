@@ -163,7 +163,7 @@ function FileTreeNode({
                 defaultValue=""
                 depth={depth + 1}
                 icon={
-                  inlineCreate!.type === 'directory'
+                  inlineCreate?.type === 'directory'
                     ? <Folder size={14} className="text-[#d29922]" />
                     : <FileCode size={14} className="text-[#8b949e]" />
                 }
@@ -321,7 +321,7 @@ export default function FileTree() {
     items.push(
       { label: '重命名', icon: <Pencil size={13} />, onClick: () => setRenamingPath(node.path) },
       { label: '删除', icon: <Trash2 size={13} />, onClick: () => setDeleteConfirm({ path: node.path, name: node.name }), danger: true },
-      { label: '复制路径', icon: <Copy size={13} />, onClick: () => { navigator.clipboard.writeText(node.path); showToast('路径已复制', 'success'); } },
+      { label: '复制路径', icon: <Copy size={13} />, onClick: () => { navigator.clipboard.writeText(node.path).then(() => showToast('路径已复制', 'success')).catch(() => showToast('复制失败', 'error')); } },
     );
     setContextMenu({ x: e.clientX, y: e.clientY, items });
   }
