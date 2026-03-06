@@ -50,6 +50,11 @@ router.post('/write', (req: Request, res: Response) => {
 router.post('/batch-write', (req: Request, res: Response) => {
   const { files, projectRoot } = req.body as { files: { path: string; content: string }[]; projectRoot: string };
   if (!files || !Array.isArray(files)) return res.status(400).json({ error: 'files array required' });
+  if (!projectRoot) return res.status(400).json({ error: 'projectRoot required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(projectRoot, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: projectRoot is outside allowed directories' });
+  }
   try {
     const results: { path: string; backupPath: string }[] = [];
     for (const f of files) {
@@ -68,6 +73,13 @@ router.post('/batch-write', (req: Request, res: Response) => {
 router.post('/restore', (req: Request, res: Response) => {
   const { backupPath, originalPath } = req.body as { backupPath: string; originalPath: string };
   if (!backupPath || !originalPath) return res.status(400).json({ error: 'backupPath and originalPath required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(backupPath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: backupPath is outside allowed directories' });
+  }
+  if (!isPathSafe(originalPath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: originalPath is outside allowed directories' });
+  }
   try {
     restoreBackup(backupPath, originalPath);
     res.json({ success: true });
