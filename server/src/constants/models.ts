@@ -1,7 +1,7 @@
 export const ALLOWED_MODELS = [
-  'deepseek-chat',
-  'deepseek-reasoner',
-  'deepseek-coder',
+  'deepseek-chat',       // V4 最新旗舰
+  'deepseek-reasoner',   // R1 深度推理
+  'deepseek-coder',      // Coder V3 编程
 ] as const;
 
 export type AllowedModel = typeof ALLOWED_MODELS[number];
