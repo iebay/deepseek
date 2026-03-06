@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 
+const MAX_IMAGE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
 interface ImageUploadProps {
   images: string[]; // base64 data URLs
   onAdd: (dataUrl: string) => void;
@@ -16,7 +18,7 @@ export default function ImageUpload({ images, onAdd, onRemove, disabled, maxImag
     const files = Array.from(e.target.files || []);
     files.forEach(file => {
       if (!file.type.startsWith('image/')) return;
-      if (file.size > 50 * 1024 * 1024) return; // 50MB limit
+      if (file.size > MAX_IMAGE_SIZE_BYTES) return; // 50MB limit
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {

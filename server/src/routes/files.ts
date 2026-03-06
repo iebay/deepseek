@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getFileTree, readFile, writeFile, backupFile, restoreBackup } from '../services/fileService';
 import path from 'path';
-import fs from 'fs';
 import { getAllowedRoots, isPathSafe } from '../utils/pathUtils';
 
 const router = Router();
@@ -94,14 +93,14 @@ router.get('/raw', (req: Request, res: Response) => {
     return res.status(403).json({ error: '访问被拒绝' });
   }
 
-  if (!fs.existsSync(resolved)) {
-    return res.status(404).json({ error: '文件不存在' });
-  }
-
   const ext = path.extname(resolved).toLowerCase();
   const mime = IMAGE_MIME_TYPES[ext] || 'application/octet-stream';
   res.setHeader('Content-Type', mime);
-  res.sendFile(resolved);
+  res.sendFile(resolved, (err) => {
+    if (err && !res.headersSent) {
+      res.status(404).json({ error: '文件不存在' });
+    }
+  });
 });
 
 export default router;

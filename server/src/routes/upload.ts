@@ -3,12 +3,13 @@ import multer from 'multer';
 import AdmZip from 'adm-zip';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { getAllowedRoots, isPathSafe } from '../utils/pathUtils';
 
 const router = Router();
 
 const upload = multer({
-  dest: '/tmp/deepseek-uploads/',
+  dest: path.join(os.tmpdir(), 'deepseek-uploads'),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
   fileFilter: (_req, file, cb) => {
     const allowedMimes = [
@@ -35,7 +36,7 @@ router.post('/zip', upload.single('file'), async (req: Request, res: Response) =
       return res.status(400).json({ error: '请指定目标目录' });
     }
 
-    // Path safety check
+    // Path safety check for target directory
     const resolvedTarget = path.resolve(targetDir);
     const allowedRoots = getAllowedRoots();
     if (!isPathSafe(resolvedTarget, allowedRoots)) {
@@ -44,12 +45,23 @@ router.post('/zip', upload.single('file'), async (req: Request, res: Response) =
     }
 
     const zip = new AdmZip(file.path);
+
+    // Validate each ZIP entry to prevent zip slip attacks
+    const entries = zip.getEntries();
+    for (const entry of entries) {
+      const entryPath = path.resolve(resolvedTarget, entry.entryName);
+      if (!entryPath.startsWith(resolvedTarget + path.sep) && entryPath !== resolvedTarget) {
+        fs.unlinkSync(file.path);
+        return res.status(400).json({ error: `ZIP 包含非法路径: ${entry.entryName}` });
+      }
+    }
+
     zip.extractAllTo(resolvedTarget, true);
 
     // Clean up temporary upload file
     fs.unlinkSync(file.path);
 
-    const entries = zip.getEntries().map(e => ({
+    const extractedEntries = entries.map(e => ({
       name: e.entryName,
       isDirectory: e.isDirectory,
       size: e.header.size,
@@ -57,8 +69,8 @@ router.post('/zip', upload.single('file'), async (req: Request, res: Response) =
 
     res.json({
       success: true,
-      message: `成功解压 ${entries.length} 个文件`,
-      files: entries,
+      message: `成功解压 ${extractedEntries.length} 个文件`,
+      files: extractedEntries,
     });
   } catch (err) {
     if (req.file) {
