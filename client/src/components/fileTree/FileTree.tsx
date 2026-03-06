@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, FileCode, FileImage, FileArchive, FileJson, FileText, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X, Upload } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileCode, FileImage, FileArchive, FileJson, FileText, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X, Upload, FilePlus, FolderPlus, Pencil, Trash2, Copy } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { fetchFileContent, uploadZip } from '../../api/filesApi';
-import { fetchFileTree } from '../../api/filesApi';
+import { fetchFileContent, uploadZip, fetchFileTree, createFileOrDir, renameFile, deleteFile } from '../../api/filesApi';
 import type { FileNode } from '../../types';
 import { FileTreeSkeleton } from '../ui/Skeleton';
+import ContextMenu, { type ContextMenuItem } from '../ui/ContextMenu';
 
 const EXT_COLORS: Record<string, string> = {
   '.tsx': '#61dafb', '.ts': '#3178c6', '.jsx': '#61dafb', '.js': '#f7df1e',
@@ -45,14 +45,72 @@ function matchesSearch(node: FileNode, query: string): boolean {
   return false;
 }
 
+function InlineInput({
+  defaultValue,
+  depth,
+  icon,
+  onCommit,
+  onCancel,
+}: {
+  defaultValue: string;
+  depth: number;
+  icon: React.ReactNode;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(defaultValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (value.trim()) onCommit(value.trim());
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  }
+
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded-md bg-[#21262d]"
+      style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '2px', paddingBottom: '2px' }}
+    >
+      <span className="shrink-0">{icon}</span>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => onCancel()}
+        className="flex-1 bg-[#0d1117] border border-[#388bfd] rounded px-1 py-0.5 text-xs text-[#e6edf3] focus:outline-none min-w-0"
+      />
+    </div>
+  );
+}
+
 function FileTreeNode({
-  node, depth, expandedPaths, onToggle, searchQuery,
+  node, depth, expandedPaths, onToggle, searchQuery, onContextMenu,
+  renamingPath, onRenameCommit, onRenameCancel,
+  inlineCreate, onInlineCreateCommit, onInlineCreateCancel,
 }: {
   node: FileNode;
   depth: number;
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
   searchQuery: string;
+  onContextMenu: (node: FileNode, e: React.MouseEvent) => void;
+  renamingPath: string | null;
+  onRenameCommit: (node: FileNode, newName: string) => void;
+  onRenameCancel: () => void;
+  inlineCreate: { parentPath: string; type: 'file' | 'directory' } | null;
+  onInlineCreateCommit: (name: string) => void;
+  onInlineCreateCancel: () => void;
 }) {
   const { openTab, setActiveTab, activeTabPath } = useAppStore();
 
@@ -68,43 +126,96 @@ function FileTreeNode({
 
   if (node.type === 'directory') {
     const isExpanded = expandedPaths.has(node.path);
+    const isRenaming = renamingPath === node.path;
+    const showCreate = inlineCreate && inlineCreate.parentPath === node.path;
+
     return (
       <div>
-        <button
-          className="flex items-center gap-1 w-full text-left hover:bg-[#21262d] rounded-md text-sm text-[#e6edf3] transition-colors group"
-          style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '3px', paddingBottom: '3px' }}
-          onClick={() => onToggle(node.path)}
-          title={node.path}
-        >
-          <span className="shrink-0 text-[#8b949e]">
-            {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          </span>
-          <span className="shrink-0 text-[#d29922]">
-            {isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />}
-          </span>
-          <span className="truncate flex-1 ml-0.5">{node.name}</span>
-        </button>
-        {isExpanded && node.children?.map(child => (
-          <FileTreeNode
-            key={child.path}
-            node={child}
-            depth={depth + 1}
-            expandedPaths={expandedPaths}
-            onToggle={onToggle}
-            searchQuery={searchQuery}
+        {isRenaming ? (
+          <InlineInput
+            defaultValue={node.name}
+            depth={depth}
+            icon={<Folder size={14} className="text-[#d29922]" />}
+            onCommit={(name) => onRenameCommit(node, name)}
+            onCancel={onRenameCancel}
           />
-        ))}
+        ) : (
+          <button
+            className="flex items-center gap-1 w-full text-left hover:bg-[#21262d] rounded-md text-sm text-[#e6edf3] transition-colors group"
+            style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '3px', paddingBottom: '3px' }}
+            onClick={() => onToggle(node.path)}
+            onContextMenu={e => onContextMenu(node, e)}
+            title={node.path}
+          >
+            <span className="shrink-0 text-[#8b949e]">
+              {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            </span>
+            <span className="shrink-0 text-[#d29922]">
+              {isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />}
+            </span>
+            <span className="truncate flex-1 ml-0.5">{node.name}</span>
+          </button>
+        )}
+        {isExpanded && (
+          <>
+            {showCreate && (
+              <InlineInput
+                defaultValue=""
+                depth={depth + 1}
+                icon={
+                  inlineCreate?.type === 'directory'
+                    ? <Folder size={14} className="text-[#d29922]" />
+                    : <FileCode size={14} className="text-[#8b949e]" />
+                }
+                onCommit={onInlineCreateCommit}
+                onCancel={onInlineCreateCancel}
+              />
+            )}
+            {node.children?.map(child => (
+              <FileTreeNode
+                key={child.path}
+                node={child}
+                depth={depth + 1}
+                expandedPaths={expandedPaths}
+                onToggle={onToggle}
+                searchQuery={searchQuery}
+                onContextMenu={onContextMenu}
+                renamingPath={renamingPath}
+                onRenameCommit={onRenameCommit}
+                onRenameCancel={onRenameCancel}
+                inlineCreate={inlineCreate}
+                onInlineCreateCommit={onInlineCreateCommit}
+                onInlineCreateCancel={onInlineCreateCancel}
+              />
+            ))}
+          </>
+        )}
       </div>
     );
   }
 
   const color = EXT_COLORS[node.extension || ''] || '#8b949e';
   const isActive = node.path === activeTabPath;
+  const isRenaming = renamingPath === node.path;
+
+  if (isRenaming) {
+    return (
+      <InlineInput
+        defaultValue={node.name}
+        depth={depth}
+        icon={getFileIcon(node.extension || '', color)}
+        onCommit={(name) => onRenameCommit(node, name)}
+        onCancel={onRenameCancel}
+      />
+    );
+  }
+
   return (
     <button
       className={`flex items-center gap-1.5 w-full text-left hover:bg-[#21262d] rounded-md text-sm transition-colors ${isActive ? 'bg-[#21262d] text-[#e6edf3]' : 'text-[#8b949e] hover:text-[#e6edf3]'}`}
       style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '3px', paddingBottom: '3px' }}
       onClick={handleFileClick}
+      onContextMenu={e => onContextMenu(node, e)}
       title={node.path}
     >
       {getFileIcon(node.extension || '', color)}
@@ -120,6 +231,15 @@ export default function FileTree() {
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(false);
   const zipInputRef = useRef<HTMLInputElement>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
+  // Rename state
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  // Inline create state
+  const [inlineCreate, setInlineCreate] = useState<{ parentPath: string; type: 'file' | 'directory' } | null>(null);
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string } | null>(null);
 
   // Initialize with first 2 levels expanded
   useEffect(() => {
@@ -175,6 +295,100 @@ export default function FileTree() {
     setExpandedPaths(new Set());
   }
 
+  async function refreshTree() {
+    if (!currentProject) return;
+    const tree = await fetchFileTree(currentProject.path);
+    setFileTree(tree);
+  }
+
+  function getDirPath(nodePath: string, nodeType: 'file' | 'directory'): string {
+    if (nodeType === 'directory') return nodePath;
+    const parts = nodePath.split('/');
+    parts.pop();
+    return parts.join('/');
+  }
+
+  function handleNodeContextMenu(node: FileNode, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const items: ContextMenuItem[] = [];
+    if (node.type === 'directory') {
+      items.push(
+        { label: '新建文件', icon: <FilePlus size={13} />, onClick: () => startCreate(node.path, 'file') },
+        { label: '新建文件夹', icon: <FolderPlus size={13} />, onClick: () => startCreate(node.path, 'directory') },
+      );
+    }
+    items.push(
+      { label: '重命名', icon: <Pencil size={13} />, onClick: () => setRenamingPath(node.path) },
+      { label: '删除', icon: <Trash2 size={13} />, onClick: () => setDeleteConfirm({ path: node.path, name: node.name }), danger: true },
+      { label: '复制路径', icon: <Copy size={13} />, onClick: () => { navigator.clipboard.writeText(node.path).then(() => showToast('路径已复制', 'success')).catch(() => showToast('复制失败', 'error')); } },
+    );
+    setContextMenu({ x: e.clientX, y: e.clientY, items });
+  }
+
+  function handleTreeAreaContextMenu(e: React.MouseEvent) {
+    // Only fire on the tree area itself, not on nodes
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    if (!currentProject) return;
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: '新建文件', icon: <FilePlus size={13} />, onClick: () => startCreate(currentProject.path, 'file') },
+        { label: '新建文件夹', icon: <FolderPlus size={13} />, onClick: () => startCreate(currentProject.path, 'directory') },
+      ],
+    });
+  }
+
+  function startCreate(parentPath: string, type: 'file' | 'directory') {
+    // Expand the parent if it's in the tree
+    setExpandedPaths(prev => new Set([...prev, parentPath]));
+    setInlineCreate({ parentPath, type });
+  }
+
+  async function handleInlineCreateCommit(name: string) {
+    if (!inlineCreate) return;
+    const newPath = `${inlineCreate.parentPath}/${name}`;
+    try {
+      await createFileOrDir(newPath, inlineCreate.type);
+      showToast(`已创建 ${name}`, 'success');
+      await refreshTree();
+    } catch (err) {
+      showToast(`创建失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setInlineCreate(null);
+    }
+  }
+
+  async function handleRenameCommit(node: FileNode, newName: string) {
+    const dirPath = getDirPath(node.path, node.type);
+    const newPath = `${dirPath}/${newName}`;
+    if (newPath === node.path) { setRenamingPath(null); return; }
+    try {
+      await renameFile(node.path, newPath);
+      showToast(`已重命名为 ${newName}`, 'success');
+      await refreshTree();
+    } catch (err) {
+      showToast(`重命名失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setRenamingPath(null);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteConfirm) return;
+    try {
+      await deleteFile(deleteConfirm.path);
+      showToast(`已删除 ${deleteConfirm.name}`, 'success');
+      await refreshTree();
+    } catch (err) {
+      showToast(`删除失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setDeleteConfirm(null);
+    }
+  }
+
   async function handleZipUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !currentProject) return;
@@ -224,6 +438,20 @@ export default function FileTree() {
             </button>
             {currentProject && (
               <>
+                <button
+                  onClick={() => startCreate(currentProject.path, 'file')}
+                  className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                  title="新建文件"
+                >
+                  <FilePlus size={12} />
+                </button>
+                <button
+                  onClick={() => startCreate(currentProject.path, 'directory')}
+                  className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                  title="新建文件夹"
+                >
+                  <FolderPlus size={12} />
+                </button>
                 <button
                   onClick={() => zipInputRef.current?.click()}
                   className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
@@ -280,7 +508,23 @@ export default function FileTree() {
       </div>
 
       {/* Tree */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div
+        className="flex-1 overflow-y-auto py-1"
+        onContextMenu={handleTreeAreaContextMenu}
+      >
+        {inlineCreate && inlineCreate.parentPath === currentProject?.path && (
+          <InlineInput
+            defaultValue=""
+            depth={0}
+            icon={
+              inlineCreate.type === 'directory'
+                ? <Folder size={14} className="text-[#d29922]" />
+                : <FileCode size={14} className="text-[#8b949e]" />
+            }
+            onCommit={handleInlineCreateCommit}
+            onCancel={() => setInlineCreate(null)}
+          />
+        )}
         {fileTree.children?.map(node => (
           <FileTreeNode
             key={node.path}
@@ -289,6 +533,13 @@ export default function FileTree() {
             expandedPaths={expandedPaths}
             onToggle={handleToggle}
             searchQuery={searchQuery}
+            onContextMenu={handleNodeContextMenu}
+            renamingPath={renamingPath}
+            onRenameCommit={handleRenameCommit}
+            onRenameCancel={() => setRenamingPath(null)}
+            inlineCreate={inlineCreate}
+            onInlineCreateCommit={handleInlineCreateCommit}
+            onInlineCreateCancel={() => setInlineCreate(null)}
           />
         ))}
       </div>
@@ -299,6 +550,42 @@ export default function FileTree() {
           <span className="text-[10px] text-[#6e7681]">
             {currentProject.fileCount} 个文件
           </span>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-[#1c2128] border border-[#30363d] rounded-lg shadow-xl p-5 max-w-sm w-full mx-4">
+            <h3 className="text-sm font-semibold text-[#e6edf3] mb-2">确认删除</h3>
+            <p className="text-xs text-[#8b949e] mb-4">
+              确定要删除 <span className="text-[#e6edf3] font-medium">{deleteConfirm.name}</span> 吗？此操作不可撤销。
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-3 py-1.5 text-xs rounded-md border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-3 py-1.5 text-xs rounded-md bg-[#da3633] hover:bg-[#b62324] text-white transition-colors"
+              >
+                删除
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

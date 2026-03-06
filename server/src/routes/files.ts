@@ -100,6 +100,65 @@ router.post('/restore', (req: Request, res: Response) => {
   }
 });
 
+router.post('/create', (req: Request, res: Response) => {
+  const { path: filePath, type, content } = req.body as { path: string; type: 'file' | 'directory'; content?: string };
+  if (!filePath) return res.status(400).json({ error: 'path required' });
+  if (type !== 'file' && type !== 'directory') return res.status(400).json({ error: 'type must be "file" or "directory"' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(filePath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
+  const resolved = path.resolve(filePath);
+  try {
+    if (type === 'directory') {
+      fs.mkdirSync(resolved, { recursive: true });
+    } else {
+      fs.mkdirSync(path.dirname(resolved), { recursive: true });
+      fs.writeFileSync(resolved, content ?? '', 'utf8');
+    }
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
+router.post('/rename', (req: Request, res: Response) => {
+  const { oldPath, newPath } = req.body as { oldPath: string; newPath: string };
+  if (!oldPath || !newPath) return res.status(400).json({ error: 'oldPath and newPath required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(oldPath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: oldPath is outside allowed directories' });
+  }
+  if (!isPathSafe(newPath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: newPath is outside allowed directories' });
+  }
+  try {
+    fs.renameSync(path.resolve(oldPath), path.resolve(newPath));
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
+router.post('/delete', (req: Request, res: Response) => {
+  const { path: filePath } = req.body as { path: string };
+  if (!filePath) return res.status(400).json({ error: 'path required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(filePath, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
+  const resolved = path.resolve(filePath);
+  try {
+    fs.rmSync(resolved, { recursive: true, force: true });
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
 router.get('/raw', (req: Request, res: Response) => {
   const filePath = req.query.path as string;
   if (!filePath) return res.status(400).json({ error: 'path query param required' });
