@@ -9,6 +9,8 @@ import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
 import Toast from './components/ui/Toast';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import OfflineIndicator from './components/ui/OfflineIndicator';
+import Terminal from './components/terminal/Terminal';
 import { useAppStore } from './store/appStore';
 
 function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number) => void; className?: string }) {
@@ -53,7 +55,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
 function EditorLayout() {
   const {
-    showPreview, showSidebar, showAIPanel, showGitPanel,
+    showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
@@ -95,6 +97,7 @@ function EditorLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-[#0d1117] text-[#e6edf3]">
+      <OfflineIndicator />
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         {/* Left: File Tree */}
@@ -178,6 +181,16 @@ function EditorLayout() {
           </button>
         )}
       </div>
+
+      {/* Bottom: Terminal */}
+      {showTerminal && (
+        <div className="h-52 shrink-0 border-t border-[#30363d] overflow-hidden">
+          <ErrorBoundary>
+            <Terminal />
+          </ErrorBoundary>
+        </div>
+      )}
+
       <Toast />
     </div>
   );

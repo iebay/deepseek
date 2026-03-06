@@ -13,9 +13,15 @@ export interface Tab {
   isDirty: boolean;
 }
 
+export interface MultimodalContentPart {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | MultimodalContentPart[];
   timestamp?: number;
 }
 
