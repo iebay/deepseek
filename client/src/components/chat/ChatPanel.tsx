@@ -3,9 +3,10 @@ import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, 
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
-import type { ChatMessage, FileNode } from '../../types';
+import type { ChatMessage, FileNode, MultimodalContentPart } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
+import ImageUpload from './ImageUpload';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -151,7 +152,10 @@ function exportChatAsMarkdown(messages: ChatMessage[], projectName: string): voi
     .map(m => {
       const role = m.role === 'user' ? '**用户**' : '**AI 助手**';
       const time = m.timestamp ? ` *(${formatTime(m.timestamp)})*` : '';
-      return `### ${role}${time}\n\n${m.content}`;
+      const contentStr = typeof m.content === 'string'
+        ? m.content
+        : m.content.map(p => (p.type === 'text' ? p.text ?? '' : '[图片]')).join('\n');
+      return `### ${role}${time}\n\n${contentStr}`;
     })
     .join('\n\n---\n\n');
   const content = header + body;
@@ -162,6 +166,32 @@ function exportChatAsMarkdown(messages: ChatMessage[], projectName: string): voi
   a.download = `chat-${Date.now()}.md`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function renderUserContent(content: ChatMessage['content']) {
+  if (typeof content === 'string') {
+    return <span className="whitespace-pre-wrap">{content}</span>;
+  }
+  return (
+    <div className="space-y-2">
+      {content.map((item, i) => {
+        if (item.type === 'text' && item.text) {
+          return <span key={i} className="whitespace-pre-wrap block">{item.text}</span>;
+        }
+        if (item.type === 'image_url' && item.image_url) {
+          return (
+            <img
+              key={i}
+              src={item.image_url.url}
+              alt="上传的图片"
+              className="max-w-[200px] rounded-lg border border-[#30363d]"
+            />
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
 }
 
 function MessageBubble({
@@ -176,6 +206,7 @@ function MessageBubble({
   appliedFiles?: Set<string>;
 }) {
   const isUser = msg.role === 'user';
+  const contentStr = typeof msg.content === 'string' ? msg.content : '';
   return (
     <div className={`flex gap-2.5 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[#388bfd]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
@@ -184,10 +215,10 @@ function MessageBubble({
       <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
         <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[#388bfd]/20 text-[#e6edf3] rounded-tr-sm' : 'bg-[#161b22] text-[#e6edf3] border border-[#30363d] rounded-tl-sm'}`}>
           {isUser ? (
-            <span className="whitespace-pre-wrap">{msg.content}</span>
+            renderUserContent(msg.content)
           ) : (
             <div className="leading-relaxed">
-              {renderContent(msg.content, onApplyFile, onApplyAll, appliedFiles)}
+              {renderContent(contentStr, onApplyFile, onApplyAll, appliedFiles)}
             </div>
           )}
         </div>
@@ -252,6 +283,7 @@ export default function ChatPanel() {
   const [elapsed, setElapsed] = useState<number>(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
@@ -301,10 +333,24 @@ export default function ChatPanel() {
 
   async function handleSend(text?: string) {
     const msgText = (text ?? input).trim();
-    if (!msgText || isAiLoading) return;
+    if ((!msgText && uploadedImages.length === 0) || isAiLoading) return;
     setInput('');
 
-    const userMsg: ChatMessage = { role: 'user', content: msgText, timestamp: Date.now() };
+    // Build multimodal or plain content
+    let userContent: ChatMessage['content'];
+    if (uploadedImages.length > 0) {
+      const parts: MultimodalContentPart[] = [];
+      if (msgText) parts.push({ type: 'text', text: msgText });
+      for (const url of uploadedImages) {
+        parts.push({ type: 'image_url', image_url: { url } });
+      }
+      userContent = parts;
+    } else {
+      userContent = msgText;
+    }
+    setUploadedImages([]);
+
+    const userMsg: ChatMessage = { role: 'user', content: userContent, timestamp: Date.now() };
     addChatMessage(userMsg);
 
     const assistantMsg: ChatMessage = { role: 'assistant', content: '', timestamp: Date.now() };
@@ -385,7 +431,8 @@ export default function ChatPanel() {
       return;
     }
     const lastMsg = chatMessages[chatMessages.length - 1];
-    const parsed = lastMsg ? tryParseFileChanges(lastMsg.content) : null;
+    const lastContent = typeof lastMsg?.content === 'string' ? lastMsg.content : '';
+    const parsed = lastContent ? tryParseFileChanges(lastContent) : null;
     if (!parsed?.files?.length) {
       showToast('未找到可应用的文件修改', 'error');
       return;
@@ -500,29 +547,37 @@ export default function ChatPanel() {
 
       {/* Input */}
       <div className="px-3 py-2.5 border-t border-[#30363d] shrink-0">
-        <div className="flex gap-2 items-end">
-          <textarea
-            ref={textareaRef}
-            className="flex-1 bg-[#161b22] border border-[#30363d] rounded-xl text-sm text-[#e6edf3] placeholder-[#6e7681] px-3 py-2.5 resize-none focus:outline-none focus:border-[#388bfd] transition-colors min-h-[40px] max-h-[120px]"
-            style={{ height: '40px' }}
-            placeholder="描述你的需求..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
+        <div className="bg-[#161b22] border border-[#30363d] rounded-xl focus-within:border-[#388bfd] transition-colors">
+          <ImageUpload
+            images={uploadedImages}
+            onAdd={(url) => setUploadedImages(prev => [...prev, url])}
+            onRemove={(i) => setUploadedImages(prev => prev.filter((_, idx) => idx !== i))}
             disabled={isAiLoading}
           />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isAiLoading}
-            className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#388bfd] hover:bg-[#58a6ff] disabled:bg-[#21262d] disabled:text-[#6e7681] text-white rounded-xl transition-colors"
-          >
-            <Send size={15} />
-          </button>
+          <div className="flex gap-2 items-end px-1 pb-1">
+            <textarea
+              ref={textareaRef}
+              className="flex-1 bg-transparent text-sm text-[#e6edf3] placeholder-[#6e7681] px-2 py-2 resize-none focus:outline-none min-h-[36px] max-h-[120px]"
+              style={{ height: '36px' }}
+              placeholder="描述你的需求..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={isAiLoading}
+            />
+            <button
+              onClick={() => handleSend()}
+              disabled={(!input.trim() && uploadedImages.length === 0) || isAiLoading}
+              className="shrink-0 w-8 h-8 mb-0.5 flex items-center justify-center bg-[#388bfd] hover:bg-[#58a6ff] disabled:bg-[#21262d] disabled:text-[#6e7681] text-white rounded-lg transition-colors"
+            >
+              <Send size={14} />
+            </button>
+          </div>
         </div>
         <p className="text-[10px] text-[#6e7681] mt-1.5">Enter 发送 · Shift+Enter 换行</p>
       </div>
@@ -547,6 +602,7 @@ export default function ChatPanel() {
                 onClick={() => {
                   clearChat();
                   setAppliedFiles(new Set());
+                  setUploadedImages([]);
                   setShowClearConfirm(false);
                   showToast('对话已清空', 'info');
                 }}

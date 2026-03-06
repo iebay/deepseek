@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { getFileTree, readFile, writeFile, backupFile, restoreBackup } from '../services/fileService';
 import path from 'path';
+import fs from 'fs';
+import { getAllowedRoots, isPathSafe } from '../utils/pathUtils';
 
 const router = Router();
 
@@ -68,6 +70,38 @@ router.post('/restore', (req: Request, res: Response) => {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ error: msg });
   }
+});
+
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+};
+
+// GET /api/files/raw?path=xxx — serve raw file content (for image preview)
+router.get('/raw', (req: Request, res: Response) => {
+  const filePath = req.query.path as string;
+  if (!filePath) return res.status(400).json({ error: '缺少 path 参数' });
+
+  const resolved = path.resolve(filePath);
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(resolved, allowedRoots)) {
+    return res.status(403).json({ error: '访问被拒绝' });
+  }
+
+  if (!fs.existsSync(resolved)) {
+    return res.status(404).json({ error: '文件不存在' });
+  }
+
+  const ext = path.extname(resolved).toLowerCase();
+  const mime = IMAGE_MIME_TYPES[ext] || 'application/octet-stream';
+  res.setHeader('Content-Type', mime);
+  res.sendFile(resolved);
 });
 
 export default router;

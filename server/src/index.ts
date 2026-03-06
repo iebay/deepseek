@@ -6,6 +6,7 @@ import aiRouter from './routes/ai';
 import templatesRouter from './routes/templates';
 import gitRouter from './routes/git';
 import memoryRouter from './routes/memory';
+import uploadRouter from './routes/upload';
 import { analyzeProject } from './services/projectAnalyzer';
 
 const app = express();
@@ -19,6 +20,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/memory', memoryRouter);
+app.use('/api/upload', uploadRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };

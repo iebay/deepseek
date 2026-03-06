@@ -63,3 +63,15 @@ export async function restoreFile(backupPath: string, originalPath: string): Pro
     throw new Error(err.error || '恢复备份失败');
   }
 }
+
+export async function uploadZip(file: File, targetDir: string): Promise<{ message: string; files: Array<{ name: string; isDirectory: boolean; size: number }> }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('targetDir', targetDir);
+  const res = await fetch('/api/upload/zip', { method: 'POST', body: formData });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '上传失败');
+  }
+  return res.json();
+}

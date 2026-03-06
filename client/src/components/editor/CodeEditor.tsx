@@ -5,6 +5,11 @@ import EditorTabs from './EditorTabs';
 import { useAppStore } from '../../store/appStore';
 import { saveFile } from '../../api/filesApi';
 import { FileCode, ChevronRight, Keyboard, Sparkles, FolderOpen, Search } from 'lucide-react';
+import ImagePreview from './ImagePreview';
+import BinaryFileNotice from './BinaryFileNotice';
+
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|svg|webp|bmp|ico)$/i;
+const BINARY_EXTENSIONS = /\.(zip|tar|gz|rar|7z|exe|dll|so|dylib|bin|dat|db|sqlite)$/i;
 
 function getLanguage(filename: string): string {
   const ext = filename.split('.').pop() || '';
@@ -158,33 +163,41 @@ export default function CodeEditor() {
       {activeTab ? (
         <>
           <Breadcrumb path={activeTab.path} />
-          <div className="flex-1 min-h-0">
-            <Editor
-              key={activeTab.path}
-              height="100%"
-              language={getLanguage(activeTab.name)}
-              value={activeTab.content}
-              onChange={handleChange}
-              onMount={handleEditorMount}
-              theme="vs-dark"
-              options={{
-                fontSize: 14,
-                fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
-                fontLigatures: true,
-                minimap: { enabled: true },
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-                renderLineHighlight: 'line',
-                smoothScrolling: true,
-                cursorBlinking: 'smooth',
-                padding: { top: 8 },
-              }}
-            />
-          </div>
-          <StatusBar filename={activeTab.name} line={cursor.line} column={cursor.column} />
+          {IMAGE_EXTENSIONS.test(activeTab.name) ? (
+            <ImagePreview path={activeTab.path} />
+          ) : BINARY_EXTENSIONS.test(activeTab.name) ? (
+            <BinaryFileNotice filename={activeTab.name} />
+          ) : (
+            <>
+              <div className="flex-1 min-h-0">
+                <Editor
+                  key={activeTab.path}
+                  height="100%"
+                  language={getLanguage(activeTab.name)}
+                  value={activeTab.content}
+                  onChange={handleChange}
+                  onMount={handleEditorMount}
+                  theme="vs-dark"
+                  options={{
+                    fontSize: 14,
+                    fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
+                    fontLigatures: true,
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    wordWrap: 'on',
+                    lineNumbers: 'on',
+                    renderLineHighlight: 'line',
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    padding: { top: 8 },
+                  }}
+                />
+              </div>
+              <StatusBar filename={activeTab.name} line={cursor.line} column={cursor.column} />
+            </>
+          )}
         </>
       ) : (
         <EmptyState />

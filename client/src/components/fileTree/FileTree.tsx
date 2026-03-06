@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, FileCode, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileCode, FileImage, FileArchive, FileText, FileJson, File, Folder, FolderOpen, Search, ChevronsUpDown, ChevronsDownUp, X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { fetchFileContent } from '../../api/filesApi';
+import { fetchFileContent, fetchFileTree } from '../../api/filesApi';
 import type { FileNode } from '../../types';
+import ZipUpload from '../ui/ZipUpload';
 
 const EXT_COLORS: Record<string, string> = {
   '.tsx': '#61dafb', '.ts': '#3178c6', '.jsx': '#61dafb', '.js': '#f7df1e',
@@ -11,6 +12,26 @@ const EXT_COLORS: Record<string, string> = {
   '.svg': '#ffb13b', '.png': '#a8c7fa', '.jpg': '#a8c7fa', '.gif': '#a8c7fa',
   '.sh': '#89e051', '.env': '#8b949e', '.yaml': '#cc3e44', '.yml': '#cc3e44',
 };
+
+function getFileIcon(name: string, color: string) {
+  const ext = name.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'png': case 'jpg': case 'jpeg': case 'gif': case 'svg': case 'webp': case 'bmp':
+      return <FileImage size={14} className="shrink-0" style={{ color }} />;
+    case 'zip': case 'tar': case 'gz': case 'rar': case '7z':
+      return <FileArchive size={14} className="shrink-0" style={{ color }} />;
+    case 'json':
+      return <FileJson size={14} className="shrink-0" style={{ color }} />;
+    case 'md': case 'txt': case 'csv':
+      return <FileText size={14} className="shrink-0" style={{ color }} />;
+    case 'ts': case 'tsx': case 'js': case 'jsx': case 'py': case 'go': case 'rs':
+    case 'java': case 'c': case 'cpp': case 'h': case 'css': case 'scss': case 'html':
+      return <FileCode size={14} className="shrink-0" style={{ color }} />;
+    default:
+      return <File size={14} className="shrink-0" style={{ color }} />;
+  }
+}
+
 
 function getAllPaths(node: FileNode): string[] {
   if (node.type === 'file') return [];
@@ -92,17 +113,27 @@ function FileTreeNode({
       onClick={handleFileClick}
       title={node.path}
     >
-      <FileCode size={14} className="shrink-0" style={{ color }} />
+      {getFileIcon(node.name, color)}
       <span className="truncate flex-1">{node.name}</span>
     </button>
   );
 }
 
 export default function FileTree() {
-  const { fileTree, currentProject } = useAppStore();
+  const { fileTree, currentProject, setFileTree } = useAppStore();
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showZipUpload, setShowZipUpload] = useState(false);
+
+  async function handleZipUploadSuccess(projectPath: string) {
+    try {
+      const tree = await fetchFileTree(projectPath);
+      setFileTree(tree);
+    } catch (e) {
+      console.error('Failed to refresh file tree', e);
+    }
+  }
 
   // Initialize with first 2 levels expanded
   useEffect(() => {
@@ -168,7 +199,7 @@ export default function FileTree() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden relative">
       {/* Header */}
       <div className="px-3 py-2 border-b border-[#30363d] shrink-0">
         <div className="flex items-center justify-between mb-1.5">
@@ -183,6 +214,15 @@ export default function FileTree() {
             >
               <Search size={12} />
             </button>
+            {currentProject && (
+              <button
+                onClick={() => setShowZipUpload(true)}
+                className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                title="解压 ZIP 文件"
+              >
+                <FileArchive size={12} />
+              </button>
+            )}
             <button
               onClick={expandAll}
               className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
@@ -243,6 +283,15 @@ export default function FileTree() {
             {currentProject.fileCount} 个文件
           </span>
         </div>
+      )}
+
+      {/* ZIP Upload overlay */}
+      {showZipUpload && currentProject && (
+        <ZipUpload
+          targetDir={currentProject.path}
+          onSuccess={() => handleZipUploadSuccess(currentProject.path)}
+          onClose={() => setShowZipUpload(false)}
+        />
       )}
     </div>
   );
