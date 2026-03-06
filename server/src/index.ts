@@ -11,8 +11,10 @@ import templatesRouter from './routes/templates';
 import gitRouter from './routes/git';
 import memoryRouter from './routes/memory';
 import uploadRouter from './routes/upload';
+import agentRouter from './routes/agent';
 import { handleTerminalUpgrade } from './routes/terminal';
 import { analyzeProject } from './services/projectAnalyzer';
+import { isPathSafe, getAllowedRoots } from './utils/pathUtils';
 
 const app = express();
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
@@ -43,6 +45,13 @@ const aiLimiter = rateLimit({
 });
 app.use('/api/ai/', aiLimiter);
 
+const agentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Agent 请求过于频繁，请稍后再试' },
+});
+app.use('/api/agent/', agentLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/files', filesRouter);
@@ -51,10 +60,15 @@ app.use('/api/templates', templatesRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/memory', memoryRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/agent', agentRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };
   if (!root) return res.status(400).json({ error: 'root is required' });
+  const allowedRoots = getAllowedRoots();
+  if (allowedRoots.length > 0 && !isPathSafe(root, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
   try {
     const info = analyzeProject(root);
     res.json(info);

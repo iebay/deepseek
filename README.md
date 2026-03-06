@@ -11,6 +11,7 @@
 - 📁 **文件树浏览器** — 浏览你项目的所有文件
 - ✏️ **Monaco 代码编辑器** — VS Code 同款编辑器，支持多标签页
 - 💬 **AI 对话面板** — 用中文描述需求，DeepSeek 自动修改代码
+- 🤖 **Agent 代理模式** — AI 自主探索代码、执行修改、运行验证，无需手动操作
 - 👁️ **Diff 预览** — 查看 AI 建议的修改，确认后一键应用
 - 🔄 **版本历史** — 每次修改前自动备份，支持一键回滚
 - 🌐 **实时预览** — iframe 预览你的前端项目效果
@@ -53,6 +54,43 @@ npm run dev
 3. 进入 API Keys 页面
 4. 创建新的 API Key
 5. 复制到 `.env` 文件中
+
+## 🤖 Agent 代理模式
+
+Agent 模式让 AI 能够像 GitHub Copilot Workspace 一样自主工作：
+
+### 功能
+
+点击顶栏的 **Bot 图标（🤖）** 即可打开 Agent 面板。
+
+### 工作流程
+
+1. 在 Agent 面板输入任务描述（如"帮我重构登录组件，添加表单验证"）
+2. Agent 自动按以下步骤执行：
+   - 🧠 **思考** — 分析需求，制定计划
+   - 🔧 **工具调用** — 读取文件、搜索代码
+   - ✏️ **执行修改** — 直接写入文件
+   - ✅ **验证** — 运行 tsc/eslint 检查
+   - 📋 **总结** — 报告完成情况
+
+### 可用工具
+
+| 工具 | 描述 |
+|------|------|
+| `read_file` | 读取项目文件内容 |
+| `write_file` | 创建或修改文件 |
+| `search_code` | 在项目中搜索代码 |
+| `list_directory` | 列出目录结构 |
+| `run_command` | 执行安全 shell 命令 |
+| `git_status` | 获取 git 状态 |
+| `task_complete` | 标记任务完成 |
+
+### 安全说明
+
+- `run_command` 仅允许: `npm`, `npx`, `tsc`, `eslint`, `prettier`, `cat`, `ls`, `echo`, `node -e`
+- 禁止写入 `node_modules` 和 `.git` 目录
+- 所有文件操作受 `ALLOWED_ROOT_PATHS` 安全限制
+- Agent 任务最多执行 15 步，防止无限循环
 
 ## 📖 使用教程
 

@@ -1,4 +1,4 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon } from 'lucide-react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
@@ -14,6 +14,7 @@ export default function TopBar() {
     toggleAIPanel, showAIPanel,
     toggleGitPanel, showGitPanel,
     toggleTerminal, showTerminal,
+    toggleAgentPanel, showAgentPanel,
   } = useAppStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -119,6 +120,13 @@ export default function TopBar() {
             title={`${showTerminal ? '隐藏' : '显示'}终端`}
           >
             <TerminalSquare size={15} />
+          </button>
+          <button
+            onClick={toggleAgentPanel}
+            className={`p-1.5 rounded-lg transition-colors ${showAgentPanel ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+            title={`${showAgentPanel ? '隐藏' : '显示'} Agent 面板`}
+          >
+            <Bot size={15} />
           </button>
         </div>
 
