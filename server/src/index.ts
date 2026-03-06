@@ -13,12 +13,14 @@ import memoryRouter from './routes/memory';
 import uploadRouter from './routes/upload';
 import { handleTerminalUpgrade } from './routes/terminal';
 import { analyzeProject } from './services/projectAnalyzer';
+import { getAllowedRoots, isPathSafe } from './utils/pathUtils';
+import os from 'os';
 
 const app = express();
 const PORT = parseInt(process.env.SERVER_PORT || '3001', 10);
 
 if (!process.env.ALLOWED_ROOT_PATHS && !process.env.ALLOWED_ROOTS) {
-  console.warn('[WARNING] ALLOWED_ROOT_PATHS is not set. All file system access will be denied.');
+  console.warn(`[WARNING] ALLOWED_ROOT_PATHS is not set. Defaulting to home directory: ${os.homedir()}. Set ALLOWED_ROOT_PATHS in .env to restrict file system access.`);
 }
 
 app.use(helmet());
@@ -55,6 +57,9 @@ app.use('/api/upload', uploadRouter);
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };
   if (!root) return res.status(400).json({ error: 'root is required' });
+  if (!isPathSafe(root, getAllowedRoots())) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
   try {
     const info = analyzeProject(root);
     res.json(info);

@@ -87,6 +87,8 @@ export async function streamChat(
   const client = new OpenAI({
     apiKey,
     baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+    timeout: 60_000,
+    maxRetries: 2,
   });
 
   const systemContent = [

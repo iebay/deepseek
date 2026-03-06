@@ -104,3 +104,21 @@ export async function configGitToken(token: string): Promise<SimpleResult> {
   }
   return res.json();
 }
+
+export interface CloneResult {
+  success: boolean;
+  path: string;
+}
+
+export async function cloneRepo(url: string, targetDir: string): Promise<CloneResult> {
+  const res = await fetch(`${BASE}/clone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, targetDir }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Clone failed');
+  }
+  return res.json();
+}

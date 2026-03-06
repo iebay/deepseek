@@ -1,6 +1,6 @@
 # 🤖 DeepSeek Code Platform
 
-> 类 Lovable.dev 的 AI 辅助代码平台，由 DeepSeek 驱动，支持 Windows 本地运行
+> 类 Lovable.dev 的 AI 辅助代码平台，由 DeepSeek 驱动，支持本地运行
 
 ## 🎯 功能介绍
 
@@ -14,8 +14,9 @@
 - 👁️ **Diff 预览** — 查看 AI 建议的修改，确认后一键应用
 - 🔄 **版本历史** — 每次修改前自动备份，支持一键回滚
 - 🌐 **实时预览** — iframe 预览你的前端项目效果
+- 🐙 **Git 集成** — 支持 commit、push，以及直接克隆 GitHub 仓库
 
-## 🚀 快速开始（Windows）
+## 🚀 快速开始
 
 ### 1. 克隆仓库
 
@@ -32,13 +33,36 @@ npm run install:all
 
 ### 3. 配置 DeepSeek API Key
 
+**Linux/macOS：**
+```bash
+cp .env.example .env
+```
+
+**Windows：**
 ```bash
 copy .env.example .env
 ```
 
-用记事本打开 `.env` 文件，将 `your_deepseek_api_key_here` 替换为你的真实 API Key。
+用文本编辑器打开 `.env` 文件，将 `your_deepseek_api_key_here` 替换为你的真实 API Key。
 
-### 4. 启动平台
+### 4. 配置文件访问路径（可选）
+
+在 `.env` 中设置 `ALLOWED_ROOT_PATHS` 以限制可访问的目录（未设置时默认允许访问用户 home 目录）：
+
+```env
+# Linux/macOS
+ALLOWED_ROOT_PATHS=/home/user/projects
+
+# Windows（使用正斜杠或双反斜杠）
+ALLOWED_ROOT_PATHS=C:/Users/YourName/projects
+```
+
+多个目录用逗号分隔：
+```env
+ALLOWED_ROOT_PATHS=/home/user/projects,/home/user/work
+```
+
+### 5. 启动平台
 
 ```bash
 npm run dev
@@ -56,16 +80,17 @@ npm run dev
 
 ## 📖 使用教程
 
-1. 打开平台后，在首页输入你的项目路径（如 `C:\Users\你的名字\Projects\myapp`）
-2. 点击"打开项目"，左侧会显示项目文件树
-3. 点击任意文件在编辑器中打开
-4. 在右侧 AI 对话框中描述你的需求，例如：
+1. 打开平台后，在首页"打开项目"标签页输入你的项目路径（如 `/home/user/myapp` 或 `C:/Users/YourName/myapp`）
+2. 也可以在"克隆仓库"标签页直接输入 GitHub URL 克隆项目
+3. 点击"打开"或"克隆"后，左侧会显示项目文件树
+4. 点击任意文件在编辑器中打开
+5. 在右侧 AI 对话框中描述你的需求，例如：
    - "帮我修复登录页面的 TypeScript 错误"
    - "把所有按钮改成圆角样式"
    - "给这个函数添加错误处理"
    - "优化这个组件的性能"
-5. AI 会显示建议的代码修改（Diff 视图）
-6. 确认无误后点击"应用修改"，文件自动保存
+6. AI 会显示建议的代码修改（Diff 视图）
+7. 确认无误后点击"应用修改"，文件自动保存
 
 ## 🛠️ 技术栈
 
@@ -73,7 +98,7 @@ npm run dev
 |------|------|
 | 前端 | React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui |
 | 编辑器 | Monaco Editor（VS Code 同款） |
-| AI | DeepSeek API（deepseek-chat / deepseek-reasoner） |
+| AI | DeepSeek API（deepseek-chat / deepseek-reasoner / deepseek-coder） |
 | 后端 | Node.js + Express |
 | 状态管理 | Zustand |
 
@@ -83,7 +108,10 @@ npm run dev
 A: 检查 `.env` 文件是否存在，且 API Key 已正确填写。
 
 **Q: 文件树不显示我的项目？**
-A: 确保输入了正确的 Windows 绝对路径，如 `C:\Users\xxx\myproject`。
+A: 确保输入了正确的绝对路径，且该路径位于 `ALLOWED_ROOT_PATHS` 下（或在 home 目录内）。
+
+**Q: 提示 "Access denied: path is outside allowed directories"？**
+A: 在 `.env` 中将项目所在目录添加到 `ALLOWED_ROOT_PATHS`，参见"配置文件访问路径"章节。
 
 **Q: AI 修改后如何撤销？**
 A: 点击右上角"历史"按钮，选择对应的历史记录，点击"回滚"。

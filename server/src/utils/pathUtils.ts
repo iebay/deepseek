@@ -1,9 +1,10 @@
 import path from 'path';
+import os from 'os';
 
 export function getAllowedRoots(): string[] {
   const envRoots = process.env.ALLOWED_ROOT_PATHS || process.env.ALLOWED_ROOTS || '';
   if (!envRoots) {
-    return [];
+    return [os.homedir()];
   }
   return envRoots.split(',').map(r => r.trim()).filter(Boolean);
 }

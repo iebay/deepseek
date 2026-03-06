@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { streamChat, ProjectContext, ChatMessage } from '../services/deepseekService';
+import { ALLOWED_MODELS, DEFAULT_MODEL } from '../constants/models';
 
 const router = Router();
 
@@ -15,7 +16,11 @@ router.post('/chat', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'messages array required' });
   }
 
-  await streamChat(messages, context || { fileTree: '', techStack: [] }, model || 'deepseek-chat', res);
+  const resolvedModel = model && (ALLOWED_MODELS as readonly string[]).includes(model)
+    ? model
+    : DEFAULT_MODEL;
+
+  await streamChat(messages, context || { fileTree: '', techStack: [] }, resolvedModel, res);
 });
 
 export default router;

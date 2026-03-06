@@ -10,6 +10,10 @@ const router = Router();
 router.get('/tree', (req: Request, res: Response) => {
   const root = req.query.root as string;
   if (!root) return res.status(400).json({ error: 'root query param required' });
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(root, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied: path is outside allowed directories' });
+  }
   try {
     const tree = getFileTree(root);
     res.json(tree);
