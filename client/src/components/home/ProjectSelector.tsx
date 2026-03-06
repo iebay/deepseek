@@ -70,6 +70,7 @@ export default function ProjectSelector() {
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>(getRecentProjects);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { setFileTree, setCurrentProject } = useAppStore();
   const navigate = useNavigate();
@@ -77,9 +78,13 @@ export default function ProjectSelector() {
   useEffect(() => {
     if (tab === 'new' && templates.length === 0) {
       setTemplatesLoading(true);
+      setTemplatesError('');
       fetchTemplates()
         .then(setTemplates)
-        .catch((err) => { console.error('加载模板失败:', err); })
+        .catch((err) => {
+          console.error('加载模板失败:', err);
+          setTemplatesError('加载模板失败，请确认服务已启动');
+        })
         .finally(() => setTemplatesLoading(false));
     }
   }, [tab, templates.length]);
@@ -271,11 +276,18 @@ export default function ProjectSelector() {
         ) : (
           <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 shadow-xl">
             <p className="text-xs text-[#8b949e] mb-3 px-1">选择一个模板快速开始</p>
-            <TemplateGrid
-              templates={templates}
-              loading={templatesLoading}
-              onSelect={setSelectedTemplate}
-            />
+            {templatesError ? (
+              <div className="flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-lg px-3 py-3">
+                <AlertCircle size={14} />
+                {templatesError}
+              </div>
+            ) : (
+              <TemplateGrid
+                templates={templates}
+                loading={templatesLoading}
+                onSelect={setSelectedTemplate}
+              />
+            )}
           </div>
         )}
 
