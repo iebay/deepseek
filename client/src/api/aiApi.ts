@@ -75,6 +75,8 @@ export function streamAIChat(options: StreamAIChatOptions): () => void {
     .catch((err: Error) => {
       if (err.name !== 'AbortError') {
         onError(err.message || 'Network error');
+      } else {
+        onDone();
       }
     });
 

@@ -83,6 +83,8 @@ export function streamAgentRun(options: StreamAgentRunOptions): () => void {
     .catch((err: Error) => {
       if (err.name !== 'AbortError') {
         onError(err.message || 'Network error');
+      } else {
+        onDone();
       }
     });
 
