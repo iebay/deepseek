@@ -82,6 +82,23 @@ export async function uploadZip(file: File, targetDir: string): Promise<void> {
   }
 }
 
+export async function uploadFiles(files: File[], targetDir: string, relativePaths?: string[]): Promise<void> {
+  const formData = new FormData();
+  files.forEach(f => formData.append('files', f));
+  formData.append('targetDir', targetDir);
+  if (relativePaths) {
+    formData.append('relativePaths', JSON.stringify(relativePaths));
+  }
+  const res = await fetch('/api/upload/files', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '文件上传失败');
+  }
+}
+
 export async function createFileOrDir(filePath: string, type: 'file' | 'directory', content?: string): Promise<void> {
   const res = await fetch(`${BASE}/create`, {
     method: 'POST',

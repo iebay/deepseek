@@ -46,4 +46,47 @@ router.post('/zip', upload.single('file'), (req: Request, res: Response) => {
   }
 });
 
+router.post('/files', upload.array('files', 50), (req: Request, res: Response) => {
+  const targetDir = req.body.targetDir as string;
+  if (!targetDir) return res.status(400).json({ error: 'targetDir required' });
+
+  const files = (req as Request & { files?: Express.Multer.File[] }).files;
+  if (!files || files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
+
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(targetDir, allowedRoots)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  let relativePaths: string[] = [];
+  try {
+    relativePaths = JSON.parse(req.body.relativePaths || '[]');
+  } catch {
+    return res.status(400).json({ error: 'Invalid relativePaths JSON' });
+  }
+
+  const resolvedTarget = path.resolve(targetDir);
+
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const relPath = relativePaths[i] || files[i].originalname;
+      const fullPath = path.resolve(resolvedTarget, relPath);
+
+      // Path traversal protection: ensure fullPath is within resolvedTarget
+      const rel = path.relative(resolvedTarget, fullPath);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) {
+        return res.status(400).json({ error: `Unsafe path: ${relPath}` });
+      }
+
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+      fs.writeFileSync(fullPath, files[i].buffer);
+    }
+
+    res.json({ success: true, fileCount: files.length });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: msg });
+  }
+});
+
 export default router;
