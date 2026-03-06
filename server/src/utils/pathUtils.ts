@@ -1,19 +1,15 @@
 import path from 'path';
-import os from 'os';
 
 export function getAllowedRoots(): string[] {
-  const roots: string[] = [];
   const envRoots = process.env.ALLOWED_ROOT_PATHS || process.env.ALLOWED_ROOTS || '';
-  if (envRoots) {
-    roots.push(...envRoots.split(',').map(r => r.trim()).filter(Boolean));
+  if (!envRoots) {
+    return [];
   }
-  if (roots.length === 0) {
-    roots.push(os.homedir());
-  }
-  return roots;
+  return envRoots.split(',').map(r => r.trim()).filter(Boolean);
 }
 
 export function isPathSafe(filePath: string, allowedRoots: string[]): boolean {
+  if (allowedRoots.length === 0) return false;
   const resolved = path.resolve(filePath);
   return allowedRoots.some(root => {
     const resolvedRoot = path.resolve(root);
