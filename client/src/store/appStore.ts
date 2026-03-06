@@ -13,7 +13,7 @@ interface AppState {
   showAIPanel: boolean;
   showGitPanel: boolean;
   showTerminal: boolean;
-  showAgentPanel: boolean;
+  aiMode: 'chat' | 'agent';
   sidebarWidth: number;
   aiPanelWidth: number;
   chatMessages: ChatMessage[];
@@ -36,7 +36,7 @@ interface AppState {
   toggleAIPanel: () => void;
   toggleGitPanel: () => void;
   toggleTerminal: () => void;
-  toggleAgentPanel: () => void;
+  setAiMode: (mode: 'chat' | 'agent') => void;
   setSidebarWidth: (width: number) => void;
   setAIPanelWidth: (width: number) => void;
   addChatMessage: (message: ChatMessage) => void;
@@ -61,7 +61,7 @@ export const useAppStore = create<AppState>()(
       showAIPanel: true,
       showGitPanel: false,
       showTerminal: false,
-      showAgentPanel: false,
+      aiMode: 'chat' as const,
       sidebarWidth: 240,
       aiPanelWidth: 320,
       chatMessages: [],
@@ -121,7 +121,7 @@ export const useAppStore = create<AppState>()(
       toggleAIPanel: () => set((state) => ({ showAIPanel: !state.showAIPanel })),
       toggleGitPanel: () => set((state) => ({ showGitPanel: !state.showGitPanel })),
       toggleTerminal: () => set((state) => ({ showTerminal: !state.showTerminal })),
-      toggleAgentPanel: () => set((state) => ({ showAgentPanel: !state.showAgentPanel })),
+      setAiMode: (mode) => set({ aiMode: mode }),
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
       setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
 

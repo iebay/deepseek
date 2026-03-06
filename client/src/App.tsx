@@ -4,8 +4,7 @@ import ProjectSelector from './components/home/ProjectSelector';
 import TopBar from './components/layout/TopBar';
 import FileTree from './components/fileTree/FileTree';
 import CodeEditor from './components/editor/CodeEditor';
-import ChatPanel from './components/chat/ChatPanel';
-import AgentPanel from './components/agent/AgentPanel';
+import UnifiedAIPanel from './components/ai/UnifiedAIPanel';
 import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
 import Toast from './components/ui/Toast';
@@ -56,7 +55,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
 function EditorLayout() {
   const {
-    showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal, showAgentPanel,
+    showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
@@ -141,7 +140,7 @@ function EditorLayout() {
           </>
         )}
 
-        {/* Right: Chat Panel */}
+        {/* Right: AI Panel (Chat + Agent unified) */}
         {showAIPanel && (
           <>
             <ResizeDivider onResize={handleAIPanelResize} />
@@ -150,12 +149,11 @@ function EditorLayout() {
               style={{ width: aiPanelWidth }}
             >
               <ErrorBoundary>
-                <ChatPanel />
+                <UnifiedAIPanel />
               </ErrorBoundary>
             </aside>
           </>
         )}
-
         {/* Right: Git Panel */}
         {showGitPanel && (
           <>
@@ -166,21 +164,6 @@ function EditorLayout() {
             >
               <ErrorBoundary>
                 <GitPanel />
-              </ErrorBoundary>
-            </aside>
-          </>
-        )}
-
-        {/* Right: Agent Panel */}
-        {showAgentPanel && (
-          <>
-            <ResizeDivider onResize={handleAIPanelResize} />
-            <aside
-              className="shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200"
-              style={{ width: aiPanelWidth }}
-            >
-              <ErrorBoundary>
-                <AgentPanel />
               </ErrorBoundary>
             </aside>
           </>

@@ -14,6 +14,10 @@ export interface FileNode {
 }
 
 export function getFileTree(rootPath: string): FileNode {
+  const allowedRoots = getAllowedRoots();
+  if (!isPathSafe(rootPath, allowedRoots)) {
+    throw new Error('Access denied: path is outside allowed directories');
+  }
   const stats = fs.statSync(rootPath);
   const name = path.basename(rootPath);
 
