@@ -142,3 +142,82 @@ body {
   height: 3px;
 }
 
+/* Gradient border for chat input */
+.input-gradient-border {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  transition: box-shadow 0.2s ease;
+}
+
+.input-gradient-border:focus-within {
+  background:
+    linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+    linear-gradient(135deg, rgba(56, 139, 253, 0.8), rgba(188, 140, 255, 0.7)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 0 16px rgba(56, 139, 253, 0.12), 0 0 8px rgba(188, 140, 255, 0.06);
+}
+
+.input-gradient-border--dragging {
+  background:
+    linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+    linear-gradient(135deg, rgba(56, 139, 253, 0.9), rgba(188, 140, 255, 0.8)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 0 20px rgba(56, 139, 253, 0.2), inset 0 0 0 1px rgba(56, 139, 253, 0.3);
+}
+
+[data-theme="light"] .input-gradient-border:focus-within {
+  background:
+    linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+    linear-gradient(135deg, rgba(9, 105, 218, 0.8), rgba(130, 80, 223, 0.7)) border-box;
+  box-shadow: 0 0 16px rgba(9, 105, 218, 0.1), 0 0 8px rgba(130, 80, 223, 0.05);
+}
+
+[data-theme="light"] .input-gradient-border--dragging {
+  background:
+    linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+    linear-gradient(135deg, rgba(9, 105, 218, 0.9), rgba(130, 80, 223, 0.8)) border-box;
+  box-shadow: 0 0 20px rgba(9, 105, 218, 0.15), inset 0 0 0 1px rgba(9, 105, 218, 0.25);
+}
+
+/* TypingDots: skeleton shimmer + blinking cursor */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typing-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.typing-cursor {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* SuggestionCards: glassmorphism hover lift */
+.suggestion-card {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.suggestion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .suggestion-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+

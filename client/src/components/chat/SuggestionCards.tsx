@@ -64,7 +64,7 @@ export default function SuggestionCards({ onSelect }: SuggestionCardsProps) {
           <button
             key={s.prompt}
             onClick={() => onSelect(s.prompt)}
-            className="group text-left p-2.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl hover:border-[var(--accent-border)] hover:bg-[var(--bg-tertiary)] transition-all duration-150"
+            className="suggestion-card group text-left p-2.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl hover:border-[var(--accent-border)] hover:bg-[var(--bg-tertiary)]"
           >
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-base">{s.icon}</span>

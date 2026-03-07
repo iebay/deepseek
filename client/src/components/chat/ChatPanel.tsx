@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Send, Bot, User, Trash2, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, Wrench } from 'lucide-react';
+import { Send, Trash2, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, Wrench } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat, streamSmartChat } from '../../api/aiApi';
 import { streamAgentRun, type AgentEvent } from '../../api/agentApi';
@@ -137,11 +137,14 @@ function MessageBubble({
   const parsedFiles = !isUser && textContent ? parseFileChanges(textContent) : null;
 
   return (
-    <div className={`flex gap-2.5 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[var(--accent-primary)]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
-        {isUser ? <User size={13} /> : <Bot size={13} />}
-      </div>
-      <div className={`max-w-[85%] min-w-0 ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+    <div className={`mb-4 ${isUser ? 'flex justify-end' : ''}`}>
+      <div className={`min-w-0 flex flex-col gap-1 ${isUser ? 'max-w-[85%] items-end' : 'items-start'}`}>
+        {!isUser && (
+          <div className="flex items-center gap-1 mb-0.5">
+            <Sparkles size={11} className="text-[var(--accent-primary)]" />
+            <span className="text-[11px] font-medium text-[var(--accent-primary)]">AI</span>
+          </div>
+        )}
         {!isUser && (agentEvents || isAgentLoading) && (
           <AgentEventTrace events={agentEvents ?? []} isLoading={isAgentLoading} />
         )}
@@ -920,11 +923,12 @@ export default function ChatPanel() {
               />
             ))}
             {isTyping && (
-              <div className="flex gap-2.5 mb-4">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#238636] to-[#2ea043] flex items-center justify-center shrink-0">
-                  <Bot size={13} />
+              <div className="mb-4">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Sparkles size={11} className="text-[var(--accent-primary)]" />
+                  <span className="text-[11px] font-medium text-[var(--accent-primary)]">AI</span>
                 </div>
-                <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl rounded-tl-sm px-3 py-2">
+                <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl rounded-tl-sm px-3 py-2 inline-block">
                   <TypingDots />
                 </div>
               </div>
@@ -937,7 +941,7 @@ export default function ChatPanel() {
       {/* Input */}
       <div className="px-3 py-2 shrink-0">
         <div
-          className={`bg-[var(--bg-secondary)] border rounded-2xl focus-within:border-[var(--accent-primary)] transition-colors relative ${isDragging ? 'border-[var(--accent-primary)] border-2' : 'border-[var(--border-primary)]'}`}
+          className={`input-gradient-border rounded-2xl relative ${isDragging ? 'input-gradient-border--dragging' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
