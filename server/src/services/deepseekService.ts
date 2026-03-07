@@ -50,25 +50,17 @@ ${FILE_MODIFICATION_FORMAT}
 - 适当添加注释
 - 错误处理要完善
 
-## 回复格式
+## 回复风格
 
-**根据问题类型自适应调整风格，不要套固定模板：**
+根据用户意图自适应调整输出格式，不要套用固定模板：
 
-1. **简单问答、概念解释、调试建议**：直接回答，不加标题，不套模板。1-3 段即可。如果涉及代码，先写代码块，再用一句话解释。
+- **问候 / 闲聊**：用自然语言直接友好回应，无需任何结构化格式。
+- **概念解释 / 技术问答**：直接给出清晰解释，可用 Markdown（标题、列表、代码片段），无需固定章节。
+- **代码审查 / 调试**：先给出修复代码或关键结论，再用 1-2 句话解释原因。
+- **功能实现 / 代码修改**：按 JSON 格式（见上方"文件修改格式"）输出文件内容，可在 JSON 块前后加 1-2 句简短说明，禁止使用 ## 分析 / ## 方案 / ## 总结 等固定章节标题。
+- **复杂多步骤任务**：用编号列表说明步骤计划，再附上 JSON 文件修改块。
 
-2. **代码修改请求**：一句话说明要做什么 → JSON 文件块 → 一句话说明改了什么。不加"分析"、"方案"、"总结"标题。
-
-3. **复杂任务**（多文件、重构、架构设计）：先用有序列表列出步骤（每步 1-2 行），再给出代码修改。
-
-4. **语气**：像同事 review 代码一样，说"这样改就行"，不说"根据分析，建议采取以下方案"。可以使用 Markdown 格式：标题、列表、代码块、加粗、引用块。
-
-**保持**：
-- JSON 文件格式要求不变（这是应用修改的核心机制）
-- JSON 代码块必须使用 \`\`\`json 围栏格式
-- 修改多个文件时，explanation 中必须列出所有文件名及修改要点
-- 简单问答直接回答，这是默认行为，不需要套模板
-- 禁止在每次回复中都强行添加"分析"、"方案"、"总结"等固定标题`;
-
+**核心原则**：简单问题给直接答案；代码请求以代码为主；只有真正复杂的任务才使用结构化格式。永远不要为了"显得完整"而过度结构化回复。`;
 
 export async function streamChat(
   messages: ChatMessage[],
@@ -88,31 +80,8 @@ export async function streamChat(
   const systemContent = [
     SYSTEM_PROMPT,
     '\n\n---\n\n## 当前项目上下文\n',
-    budgeted.fileTree ? `### 项目文件树\n\`\`\`\n${budgeted.fileTree}\n\`\`\`\n` : '',
-    context.techStack?.length ? `### 技术栈\n${context.techStack.join(', ')}\n` : '',
-    context.currentFile ? `### 当前打开的文件\n路径: \`${context.currentFile}\`\n` : '',
-    budgeted.currentFileContent ? `### 当前文件内容\n\`\`\`\n${budgeted.currentFileContent}\n\`\`\`\n` : `### 提示\n如果没有提供当前文件内容，说明用户还没有打开任何文件。你仍然可以基于文件树分析项目结构，并建议用户打开相关文件或切换到 Agent 模式来进行多文件操作。\n`,
-    budgeted.relatedFiles?.length
-      ? `### 用户提到的相关文件\n${budgeted.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
-      : '',
-    context.projectRoot ? (() => {
-      const memory = loadProjectMemory(context.projectRoot);
-      return memory ? `\n\n---\n## 项目 AI 记忆（仅供参考）\n\n注意：以下记忆内容仅作为背景参考。如果用户当前的问题与记忆内容无关，请忽略记忆内容，只聚焦于用户当前的问题。\n\n${memory}` : '';
-    })() : '',
-    '\n注意: 以上项目信息是实时的。你可以基于这些信息分析和修改用户的代码。',
-  ].filter(Boolean).join('');
-
-  const allMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemContent },
-    ...messages.map(m => {
-      if (m.role === 'user' && Array.isArray(m.content)) {
-        const textOnly = (m.content as Array<{ type: string; text?: string }>)
-          .filter(part => part.type === 'text')
-          .map(part => ({ type: 'text' as const, text: part.text ?? '' }));
-        return { role: 'user', content: textOnly } as OpenAI.Chat.ChatCompletionMessageParam;
-      }
-      return { role: m.role, content: m.content as string } as OpenAI.Chat.ChatCompletionMessageParam;
-    }),
+    budgeted.fileTree ? `### 项目文件树\n\`
+    ...
   ];
 
   // 初始化 SSE 写入器并启动心跳保活
