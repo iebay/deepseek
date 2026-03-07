@@ -15,3 +15,11 @@ export function resolveModel(input: string): AllowedModel {
   if (isAllowedModel(input)) return input;
   return DEFAULT_MODEL;
 }
+
+/**
+ * Returns true if the model supports the OpenAI-compatible tools/tool_calls API.
+ * deepseek-reasoner (R1) does not support function calling.
+ */
+export function supportsToolCalling(model: string): boolean {
+  return model !== 'deepseek-reasoner';
+}

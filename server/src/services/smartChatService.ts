@@ -3,6 +3,8 @@ import type { Response } from 'express';
 import { runTool } from '../agent/toolRunner';
 import { loadProjectMemory } from './memoryService';
 import type { ChatMessage, ProjectContext } from './deepseekService';
+import { supportsToolCalling } from '../constants/models';
+import { sanitizeContent } from '../utils/sanitize';
 
 const SMART_CHAT_TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
   {
@@ -63,17 +65,6 @@ const SMART_CHAT_TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
     },
   },
 ];
-
-const SMART_CHAT_TOOL_PROMPT = `
-## 智能排查能力
-
-你现在可以通过工具调用主动探索项目代码：
-- **read_file(path)** — 读取任意文件内容，深入理解代码
-- **search_code(pattern)** — 搜索代码定位问题
-- **list_directory(path)** — 浏览目录结构
-- **git_status()** — 查看当前 git 状态
-
-当用户的问题需要更多上下文时，主动使用这些工具去查看相关代码，而不是猜测或要求用户提供。`;
 
 const SMART_CHAT_BASE_PROMPT = `你是 DeepSeek Code AI 助手——一个集成在代码编辑器中的全栈开发 AI。你拥有完整的项目上下文访问权限，可以直接读取用户的本地文件。
 
@@ -175,7 +166,6 @@ export async function streamSmartChat(
 
   const systemContent = [
     SMART_CHAT_BASE_PROMPT,
-    SMART_CHAT_TOOL_PROMPT,
     '\n\n---\n\n## 当前项目上下文\n',
     context.fileTree ? `### 项目文件树\n\`\`\`\n${context.fileTree}\n\`\`\`\n` : '',
     context.techStack?.length ? `### 技术栈\n${context.techStack.join(', ')}\n` : '',
@@ -204,6 +194,31 @@ export async function streamSmartChat(
   sseEvent(res, { type: 'thinking', message: '正在分析...' });
 
   try {
+    // deepseek-reasoner (R1) does not support function calling — stream directly
+    if (!supportsToolCalling(model)) {
+      const directStream = await client.chat.completions.create({
+        model,
+        messages: loopMessages,
+        stream: true,
+        stream_options: { include_usage: true },
+      });
+
+      for await (const chunk of directStream) {
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          const clean = sanitizeContent(delta);
+          if (clean) sseEvent(res, { type: 'content', content: clean });
+        }
+        if (chunk.usage) {
+          sseEvent(res, { type: 'usage', usage: chunk.usage, model });
+        }
+      }
+
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
       // Non-streaming call to detect tool calls
       const response = await client.chat.completions.create({
@@ -233,7 +248,8 @@ export async function streamSmartChat(
         for await (const chunk of finalStream) {
           const delta = chunk.choices[0]?.delta?.content;
           if (delta) {
-            sseEvent(res, { type: 'content', content: delta });
+            const clean = sanitizeContent(delta);
+            if (clean) sseEvent(res, { type: 'content', content: clean });
           }
           if (chunk.usage) {
             sseEvent(res, { type: 'usage', usage: chunk.usage, model });
@@ -285,6 +301,7 @@ export async function streamSmartChat(
     const finalStream = await client.chat.completions.create({
       model,
       messages: loopMessages,
+      tool_choice: 'none',
       stream: true,
       stream_options: { include_usage: true },
     });
@@ -292,7 +309,8 @@ export async function streamSmartChat(
     for await (const chunk of finalStream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) {
-        sseEvent(res, { type: 'content', content: delta });
+        const clean = sanitizeContent(delta);
+        if (clean) sseEvent(res, { type: 'content', content: clean });
       }
       if (chunk.usage) {
         sseEvent(res, { type: 'usage', usage: chunk.usage, model });
