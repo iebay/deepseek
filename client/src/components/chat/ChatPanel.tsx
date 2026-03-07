@@ -604,8 +604,6 @@ export default function ChatPanel() {
 
   const activeTab = openTabs.find(t => t.path === activeTabPath);
   const isTyping = isAiLoading && chatMessages[chatMessages.length - 1]?.content === '';
-  const smartModeAvailable = !!currentProject?.path;
-
   return (
     <div className="flex flex-col h-full bg-[var(--bg-primary)] relative">
       {/* Header */}
@@ -626,13 +624,12 @@ export default function ChatPanel() {
             {/* Smart mode toggle */}
             <button
               onClick={toggleSmartMode}
-              disabled={!smartModeAvailable}
               className={`p-1.5 rounded-lg transition-colors ${
-                smartModeAvailable && smartMode
+                smartMode
                   ? 'text-[var(--accent-primary)] bg-[var(--accent-bg)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-              title={smartModeAvailable ? (smartMode ? '智能模式已开启（点击关闭）' : '开启智能模式') : '请先打开项目'}
+              }`}
+              title={smartMode ? '智能模式已开启（点击关闭）' : '开启智能模式'}
             >
               <Brain size={14} />
             </button>
@@ -692,7 +689,7 @@ export default function ChatPanel() {
           )}
           <span className="text-[var(--border-primary)]">·</span>
           <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">{selectedModel}</span>
-          {smartModeAvailable && smartMode && (
+          {smartMode && (
             <>
               <span className="text-[var(--border-primary)]">·</span>
               <span className="text-[10px] text-[var(--accent-primary)] whitespace-nowrap">🧠 智能模式</span>
