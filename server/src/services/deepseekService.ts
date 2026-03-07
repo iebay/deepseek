@@ -129,12 +129,16 @@ export async function streamChat(
       model,
       messages: allMessages,
       stream: true,
+      stream_options: { include_usage: true },
     });
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) {
         res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+      }
+      if (chunk.usage) {
+        res.write(`data: ${JSON.stringify({ type: 'usage', usage: chunk.usage, model })}\n\n`);
       }
     }
 

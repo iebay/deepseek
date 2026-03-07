@@ -1,9 +1,10 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search, Undo2, Redo2, Package } from 'lucide-react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search, Undo2, Redo2, Package, BarChart3 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import { MODELS } from '../../constants/models';
 import CommandPalette from '../ui/CommandPalette';
+import TokenStatsPanel from '../stats/TokenStatsPanel';
 
 export default function TopBar() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function TopBar() {
     toggleTerminal, showTerminal,
     toggleSearchPanel, showSearchPanel,
     toggleNpmPanel, showNpmPanel,
+    toggleStatsPanel, showStatsPanel,
     aiMode, activateAgentMode,
     currentBranch,
     canUndo, canRedo, undo, redo,
@@ -207,6 +209,13 @@ export default function TopBar() {
           >
             <Package size={15} />
           </button>
+          <button
+            onClick={toggleStatsPanel}
+            className={`p-1.5 rounded-lg transition-colors ${showStatsPanel ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+            title="Token 使用统计"
+          >
+            <BarChart3 size={15} />
+          </button>
         </div>
 
         <div className="h-4 w-px bg-[#30363d] mx-1" />
@@ -246,6 +255,9 @@ export default function TopBar() {
       </header>
       {showCommandPalette && (
         <CommandPalette onClose={() => setShowCommandPalette(false)} />
+      )}
+      {showStatsPanel && (
+        <TokenStatsPanel onClose={toggleStatsPanel} />
       )}
     </>
   );
