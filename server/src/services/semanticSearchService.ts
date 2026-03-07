@@ -19,6 +19,10 @@ interface SearchResult {
 
 function tokenize(text: string): string[] {
   return text
+    // Split camelCase: "handleSend" → "handle Send"
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    // Split snake_case: "handle_send" → "handle send"
+    .replace(/_/g, ' ')
     .toLowerCase()
     .replace(/[^a-z0-9\u4e00-\u9fff]+/g, ' ')
     .split(' ')

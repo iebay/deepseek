@@ -33,6 +33,9 @@ app.use(cors({
   credentials: true,
 }));
 
+// NOTE: Using in-memory store. For multi-instance deployments, switch to
+// rate-limit-redis or similar persistent store, or use an upstream proxy
+// (Nginx / Cloudflare) for rate limiting.
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -102,6 +105,14 @@ server.on('upgrade', (request, socket, head) => {
 
 server.listen(PORT, () => {
   console.log(`DeepSeek server running on http://localhost:${PORT}`);
+});
+
+// Global error handler — must be registered after all routes
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[ERROR]', err.message, err.stack);
+  res.status(500).json({
+    error: process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message,
+  });
 });
 
 export default app;
