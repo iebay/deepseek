@@ -12,6 +12,7 @@ import gitRouter from './routes/git';
 import memoryRouter from './routes/memory';
 import uploadRouter from './routes/upload';
 import agentRouter from './routes/agent';
+import statsRouter from './routes/stats';
 import projectsRouter from './routes/projects';
 import { handleTerminalUpgrade } from './routes/terminal';
 import { analyzeProject } from './services/projectAnalyzer';
@@ -63,6 +64,7 @@ app.use('/api/git', gitRouter);
 app.use('/api/memory', memoryRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/stats', statsRouter);
 app.use('/api/projects', projectsRouter);
 
 app.post('/api/project/analyze', (req, res) => {

@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, StopCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { streamAIChat } from '../../api/aiApi';
+import { streamAIChat, type TokenUsageInfo } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
+import { recordTokenUsage } from '../../api/statsApi';
+import { formatCost } from '../../utils/formatStats';
 import type { ChatMessage, MultimodalContentPart, FileNode } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
@@ -284,6 +286,7 @@ export default function ChatPanel() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
+  const [lastUsage, setLastUsage] = useState<(TokenUsageInfo & { cost?: number }) | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
@@ -408,6 +411,19 @@ export default function ChatPanel() {
         updateLastAssistantMessage(`错误: ${err}`);
         setAiLoading(false);
         abortRef.current = null;
+      },
+      onUsage: (usage) => {
+        setLastUsage(usage);
+        void recordTokenUsage({
+          model: usage.model,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens,
+        }).then((record) => {
+          if (record) {
+            setLastUsage(prev => prev ? { ...prev, cost: record.cost } : prev);
+          }
+        });
       },
     });
   }
@@ -631,7 +647,15 @@ export default function ChatPanel() {
             <Send size={15} />
           </button>
         </div>
-        <p className="text-[10px] text-[#6e7681] mt-1.5">Enter 发送 · Shift+Enter 换行</p>
+        <p className="text-[10px] text-[#6e7681] mt-1.5">
+          Enter 发送 · Shift+Enter 换行
+          {lastUsage && (
+            <span className="text-[#484f58]">
+              {` · ${lastUsage.totalTokens.toLocaleString()} tokens`}
+              {lastUsage.cost !== undefined && ` · ${formatCost(lastUsage.cost)}`}
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Clear confirm dialog */}

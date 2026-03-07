@@ -1,5 +1,13 @@
 import type { ChatMessage, ProjectInfo } from '../types';
 
+export interface TokenUsageInfo {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  model: string;
+  timestamp: number;
+}
+
 interface StreamAIChatOptions {
   messages: ChatMessage[];
   context: {
@@ -14,10 +22,11 @@ interface StreamAIChatOptions {
   onChunk: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
+  onUsage?: (usage: TokenUsageInfo) => void;
 }
 
 export function streamAIChat(options: StreamAIChatOptions): () => void {
-  const { messages, context, model, onChunk, onDone, onError } = options;
+  const { messages, context, model, onChunk, onDone, onError, onUsage } = options;
   const controller = new AbortController();
 
   fetch('/api/ai/chat', {
@@ -59,7 +68,9 @@ export function streamAIChat(options: StreamAIChatOptions): () => void {
                 onError(parsed.error);
                 return;
               }
-              if (parsed.content) {
+              if (parsed.type === 'usage' && onUsage) {
+                onUsage(parsed.usage as TokenUsageInfo);
+              } else if (parsed.content) {
                 onChunk(parsed.content);
               }
             } catch {
