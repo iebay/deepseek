@@ -4,6 +4,7 @@ import { readFile, writeFile, getFileTree } from '../services/fileService';
 import { isPathSafe, getAllowedRoots } from '../utils/pathUtils';
 import { search as semanticSearch } from '../services/semanticSearchService';
 import { search as webSearch } from '../services/webSearchService';
+import { createProjectFromTemplate, getTemplates } from '../services/templateService';
 
 const SAFE_COMMANDS = /^(npm |npx |tsc |eslint |prettier |cat |ls |dir |echo )/;
 const SHELL_METACHARACTERS = /[;&|`$<>\\]/;
@@ -442,6 +443,40 @@ export async function runTool(
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : '未知错误';
           return `网络搜索失败: ${msg}`;
+        }
+      }
+
+      case 'create_project': {
+        const templateId = args.template_id as string;
+        const projectName = args.project_name as string;
+        if (!templateId) return '错误: 缺少 template_id 参数';
+        if (!projectName) return '错误: 缺少 project_name 参数';
+        // Validate project name: only allow safe characters (alphanumeric, hyphen, underscore)
+        if (!/^[a-zA-Z0-9_-]+$/.test(projectName)) {
+          return '错误: project_name 只能包含字母、数字、连字符和下划线';
+        }
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const rawTarget = (args.target_path as string | undefined) ?? projectRoot;
+        const absTarget = path.resolve(
+          path.isAbsolute(rawTarget) ? rawTarget : path.join(projectRoot, rawTarget),
+        );
+        if (!isPathSafe(absTarget, allowedRoots)) {
+          return '错误: target_path 不在允许的目录范围内';
+        }
+        // List available templates for helpful error messages
+        const availableTemplates = getTemplates().map(t => t.id);
+        if (!availableTemplates.includes(templateId)) {
+          return `错误: 未知模板 "${templateId}"。可用模板: ${availableTemplates.join(', ')}`;
+        }
+        try {
+          const result = createProjectFromTemplate(templateId, projectName, absTarget);
+          return `项目创建成功！\n路径: ${result.projectPath}\n创建文件数: ${result.filesCreated}`;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `创建项目失败: ${msg}`;
         }
       }
 
