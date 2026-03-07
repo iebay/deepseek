@@ -13,7 +13,11 @@ const DSML_TAG_RE = /< *\|? *DSML *\|? *[^>]*>[\s\S]*?< *\/ *\|? *DSML *\|? *[^>
 const TOOL_CALL_TAG_RE = /<\s*(?:function_calls|invoke(?:\s[^>]*)?)>[\s\S]*?<\/\s*(?:function_calls|invoke)\s*>/g;
 const PARAMETER_TAG_RE = /<\s*parameter(?:\s[^>]*)?>[\s\S]*?<\/\s*parameter\s*>/g;
 
-export function renderInline(text: string): React.ReactNode {
+export function renderInline(
+  text: string,
+  knownPaths?: Set<string>,
+  onOpenFile?: (path: string) => void,
+): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
@@ -22,7 +26,20 @@ export function renderInline(text: string): React.ReactNode {
     const codeParts = part.split(/(`[^`]+`)/g);
     return codeParts.map((cp, j) => {
       if (cp.startsWith('`') && cp.endsWith('`')) {
-        return <code key={j} className="px-1 py-0.5 bg-[var(--bg-tertiary)] rounded text-[var(--text-primary)] text-[11px] font-mono">{cp.slice(1, -1)}</code>;
+        const inner = cp.slice(1, -1);
+        if (knownPaths && onOpenFile && knownPaths.has(inner)) {
+          return (
+            <button
+              key={j}
+              onClick={() => onOpenFile(inner)}
+              className="px-1 py-0.5 bg-[var(--bg-tertiary)] rounded text-[var(--accent-primary)] text-[11px] font-mono hover:underline cursor-pointer"
+              title={`在编辑器中打开 ${inner}`}
+            >
+              {inner}
+            </button>
+          );
+        }
+        return <code key={j} className="px-1 py-0.5 bg-[var(--bg-tertiary)] rounded text-[var(--text-primary)] text-[11px] font-mono">{inner}</code>;
       }
       return cp;
     });
@@ -34,6 +51,8 @@ export function renderContent(
   onApplyFile?: (f: { path: string; content: string }) => Promise<void>,
   onApplyAll?: () => Promise<void>,
   appliedFiles?: Set<string>,
+  knownPaths?: Set<string>,
+  onOpenFile?: (path: string) => void,
 ): React.ReactNode[] {
   const sanitized = content
     .replace(DSML_TAG_RE, '')
@@ -51,7 +70,7 @@ export function renderContent(
     if (match.index > lastIndex) {
       parts.push(
         <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
-          {renderInline(sanitized.slice(lastIndex, match.index))}
+          {renderInline(sanitized.slice(lastIndex, match.index), knownPaths, onOpenFile)}
         </span>
       );
     }
@@ -92,7 +111,7 @@ export function renderContent(
   if (lastIndex < sanitized.length) {
     parts.push(
       <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
-        {renderInline(sanitized.slice(lastIndex))}
+        {renderInline(sanitized.slice(lastIndex), knownPaths, onOpenFile)}
       </span>
     );
   }

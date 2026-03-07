@@ -132,6 +132,7 @@ interface AppState {
   setCurrentBranch: (branch: string) => void;
   addChatMessage: (message: ChatMessage) => void;
   updateLastAssistantMessage: (content: string) => void;
+  truncateChatMessages: (keepCount: number) => void;
   clearChat: () => void;
   setAiLoading: (loading: boolean) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -297,6 +298,17 @@ export const useAppStore = create<AppState>()(
                   : s
               );
               return { chatMessages: [], chatSessions: updatedSessions };
+            }),
+
+          truncateChatMessages: (keepCount: number) =>
+            set((state) => {
+              const msgs = state.chatMessages.slice(0, keepCount);
+              const updatedSessions = state.chatSessions.map(s =>
+                s.id === state.activeChatSessionId
+                  ? { ...s, messages: msgs, updatedAt: Date.now() }
+                  : s
+              );
+              return { chatMessages: msgs, chatSessions: updatedSessions };
             }),
 
           setAiLoading: (loading) => set({ isAiLoading: loading }),
