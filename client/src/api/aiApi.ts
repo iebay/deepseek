@@ -1,9 +1,9 @@
 import type { ChatMessage, ProjectInfo } from '../types';
 
 export interface UsageInfo {
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
 }
 
 interface StreamAIChatOptions {

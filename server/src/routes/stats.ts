@@ -41,10 +41,17 @@ function pruneOldRecords(records: TokenUsageRecord[]): TokenUsageRecord[] {
   return records.filter(r => r.timestamp >= cutoff);
 }
 
-function getPrices(): { inputPrice: number; outputPrice: number } {
-  const inputPrice = parseFloat(process.env.DEEPSEEK_CHAT_INPUT_PRICE || '0.00014');
-  const outputPrice = parseFloat(process.env.DEEPSEEK_CHAT_OUTPUT_PRICE || '0.00028');
-  return { inputPrice, outputPrice };
+function getPrices(model: string): { inputPrice: number; outputPrice: number } {
+  if (model.includes('reasoner')) {
+    return {
+      inputPrice: parseFloat(process.env.DEEPSEEK_REASONER_INPUT_PRICE || '0.00055'),
+      outputPrice: parseFloat(process.env.DEEPSEEK_REASONER_OUTPUT_PRICE || '0.00219'),
+    };
+  }
+  return {
+    inputPrice: parseFloat(process.env.DEEPSEEK_CHAT_INPUT_PRICE || '0.00014'),
+    outputPrice: parseFloat(process.env.DEEPSEEK_CHAT_OUTPUT_PRICE || '0.00028'),
+  };
 }
 
 function filterByPeriod(records: TokenUsageRecord[], period: string): TokenUsageRecord[] {
@@ -79,11 +86,15 @@ router.post('/token-usage', (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  if (isNaN(promptTokens) || isNaN(completionTokens) || isNaN(totalTokens)) {
+    return res.status(400).json({ error: 'Token counts must be valid numbers' });
+  }
+
   if (promptTokens < 0 || completionTokens < 0 || totalTokens < 0) {
     return res.status(400).json({ error: 'Token counts must be non-negative' });
   }
 
-  const { inputPrice, outputPrice } = getPrices();
+  const { inputPrice, outputPrice } = getPrices(model);
   const cost = (promptTokens / 1000) * inputPrice + (completionTokens / 1000) * outputPrice;
 
   const record: TokenUsageRecord = {

@@ -138,7 +138,16 @@ export async function streamChat(
         res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
       }
       if (chunk.usage) {
-        res.write(`data: ${JSON.stringify({ type: 'usage', usage: chunk.usage, model })}\n\n`);
+        res.write(`data: ${JSON.stringify({
+          type: 'usage',
+          usage: {
+            promptTokens: chunk.usage.prompt_tokens,
+            completionTokens: chunk.usage.completion_tokens,
+            totalTokens: chunk.usage.total_tokens,
+          },
+          model,
+          timestamp: Date.now(),
+        })}\n\n`);
       }
     }
 
