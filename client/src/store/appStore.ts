@@ -68,6 +68,7 @@ interface AppState {
   aiMode: 'chat' | 'agent';
   sidebarWidth: number;
   aiPanelWidth: number;
+  currentBranch: string | null;
   chatMessages: ChatMessage[];
   chatSessions: ChatSession[];
   activeChatSessionId: string | null;
@@ -96,6 +97,7 @@ interface AppState {
   activateAgentMode: () => void;
   setSidebarWidth: (width: number) => void;
   setAIPanelWidth: (width: number) => void;
+  setCurrentBranch: (branch: string) => void;
   addChatMessage: (message: ChatMessage) => void;
   updateLastAssistantMessage: (content: string) => void;
   clearChat: () => void;
@@ -129,6 +131,7 @@ export const useAppStore = create<AppState>()(
           aiMode: 'chat' as const,
           sidebarWidth: 240,
           aiPanelWidth: 320,
+          currentBranch: null,
           chatMessages: [],
           chatSessions: [initialSession],
           activeChatSessionId: initialSession.id,
@@ -194,6 +197,7 @@ export const useAppStore = create<AppState>()(
           activateAgentMode: () => set({ aiMode: 'agent', showAIPanel: true }),
           setSidebarWidth: (width) => set({ sidebarWidth: width }),
           setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
+          setCurrentBranch: (branch) => set({ currentBranch: branch }),
 
           addChatMessage: (message) =>
             set((state) => {

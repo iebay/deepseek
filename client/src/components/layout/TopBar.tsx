@@ -16,6 +16,7 @@ export default function TopBar() {
     toggleTerminal, showTerminal,
     toggleSearchPanel, showSearchPanel,
     aiMode, activateAgentMode,
+    currentBranch,
   } = useAppStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -74,6 +75,16 @@ export default function TopBar() {
                 </span>
               )}
             </button>
+            {currentBranch && (
+              <button
+                onClick={toggleGitPanel}
+                className="flex items-center gap-1 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] px-1.5 py-1 rounded-lg transition-colors shrink-0"
+                title="切换分支"
+              >
+                <GitBranch size={12} />
+                <span className="max-w-[100px] truncate">{currentBranch}</span>
+              </button>
+            )}
           </>
         )}
 
