@@ -383,8 +383,8 @@ export default function ChatPanel() {
   }
 
   function handleDragLeave(e: React.DragEvent) {
-    // Only clear if leaving the container itself
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+    // Only clear if leaving the container itself (relatedTarget may be null when leaving window)
+    if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragging(false);
     }
   }
@@ -501,7 +501,8 @@ export default function ChatPanel() {
             setLoadingMsgIndex(null);
             abortRef.current = null;
           } else if (event.event === 'error') {
-            if (!fullContent) updateLastAssistantMessage(`错误: ${event.message ?? '未知错误'}`);
+            const errMsg = event.message ?? '未知错误';
+            updateLastAssistantMessage(fullContent ? fullContent + `\n\n错误: ${errMsg}` : `错误: ${errMsg}`);
             setAiLoading(false);
             setLoadingMsgIndex(null);
             abortRef.current = null;

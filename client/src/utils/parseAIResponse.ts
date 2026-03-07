@@ -67,7 +67,7 @@ export function extractCodeBlocks(text: string): CodeBlock[] {
  */
 export function parseSections(text: string): ParsedSections {
   const sectionMap: Record<string, string> = {};
-  const sectionRegex = /^##\s+(分析|方案|代码修改|总结)\s*\n([\s\S]*?)(?=^##\s+|\Z)/gm;
+  const sectionRegex = /^##\s+(分析|方案|代码修改|总结)\s*\n([\s\S]*?)(?=^##\s+|$)/gm;
   let match;
   let hasStructure = false;
 
