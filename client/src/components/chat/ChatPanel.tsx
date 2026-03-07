@@ -451,13 +451,13 @@ export default function ChatPanel() {
         },
         onUsage: (usage, model) => {
           const { inputPrice, outputPrice } = getModelPrices(model);
-          const cost = (usage.prompt_tokens / 1000) * inputPrice + (usage.completion_tokens / 1000) * outputPrice;
-          setLastUsage({ tokens: usage.total_tokens, cost });
+          const cost = (usage.promptTokens / 1000) * inputPrice + (usage.completionTokens / 1000) * outputPrice;
+          setLastUsage({ tokens: usage.totalTokens, cost });
           recordTokenUsage({
             model,
-            promptTokens: usage.prompt_tokens,
-            completionTokens: usage.completion_tokens,
-            totalTokens: usage.total_tokens,
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            totalTokens: usage.totalTokens,
           }).catch(() => { /* ignore */ });
         },
         onToolCall: (event) => {
@@ -503,13 +503,13 @@ export default function ChatPanel() {
         },
         onUsage: (usage, model) => {
           const { inputPrice, outputPrice } = getModelPrices(model);
-          const cost = (usage.prompt_tokens / 1000) * inputPrice + (usage.completion_tokens / 1000) * outputPrice;
-          setLastUsage({ tokens: usage.total_tokens, cost });
+          const cost = (usage.promptTokens / 1000) * inputPrice + (usage.completionTokens / 1000) * outputPrice;
+          setLastUsage({ tokens: usage.totalTokens, cost });
           recordTokenUsage({
             model,
-            promptTokens: usage.prompt_tokens,
-            completionTokens: usage.completion_tokens,
-            totalTokens: usage.total_tokens,
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            totalTokens: usage.totalTokens,
           }).catch(() => { /* ignore */ });
         },
       });

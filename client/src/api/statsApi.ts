@@ -57,9 +57,13 @@ export async function fetchTokenStats(period: StatsPeriod): Promise<TokenStatsRe
 }
 
 export async function recordTokenUsage(data: TokenUsageData): Promise<void> {
-  await fetch('/api/stats/token-usage', {
+  const res = await fetch('/api/stats/token-usage', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '记录Token使用失败');
+  }
 }
