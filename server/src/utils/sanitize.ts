@@ -48,7 +48,7 @@ const MAYBE_TAG_RE = /^<(?:\s*\|\s*)?\/? *(?:DSML|function_calls|invoke|paramete
 const TAG_LOOKAHEAD = 20;
 
 /** If the buffer grows beyond this size, flush it regardless. */
-const MAX_BUFFER = 500;
+const MAX_BUFFER = 10_000;
 
 /**
  * Stateful sanitizer for **streaming** content.
@@ -115,10 +115,18 @@ export class StreamSanitizer {
 
       // Buffer now starts with `<`.
 
-      // Safety valve: if the buffer has grown very large, emit it all.
-      if (this.buffer.length > MAX_BUFFER) {
-        out += sanitizeContent(this.buffer);
-        this.buffer = '';
+      // Safety valve: if the buffer has grown very large, flush the portion
+      // before the last `<` so any in-progress tag can still be completed.
+      if (this.buffer.length >= MAX_BUFFER) {
+        const lastLt = this.buffer.lastIndexOf('<');
+        if (lastLt > 0) {
+          // Emit everything before the last '<', keep the rest buffered.
+          out += sanitizeContent(this.buffer.slice(0, lastLt));
+          this.buffer = this.buffer.slice(lastLt);
+        }
+        // When lastLt === 0, the entire buffer is one potential tag starting
+        // at position 0.  Keep it buffered so the closing tag can still arrive
+        // and be matched; do not emit raw incomplete tag fragments.
         return out;
       }
 
