@@ -4,20 +4,44 @@
  *
  * Handles:
  *   - The literal pipe form:  "< | DSML | function_calls>…</ | DSML | function_calls>"
- *   - The plain form:          "<function_calls>…</function_calls>"
+ *   - The prefix form:        "<DSML function_calls>…</DSML function_calls>"
+ *   - The plain form:         "<function_calls>…</function_calls>"
  *   - "<invoke …>…</invoke>"
  *   - "<parameter …>…</parameter>"
  */
-const DSML_TAG_RE = /< *\|? *DSML *\|? *[^>]*>[\s\S]*?< *\/ *\|? *DSML *\|? *[^>]*>/g;
+
+// Matches <DSML ...>...</DSML ...> in all pipe/space arrangements
+const DSML_TAG_RE = /< *[\s|]*DSML[\s|]*[^>]*>[\s\S]*?< *\/[\s|]*DSML[\s|]*[^>]*>/g;
+// Catch-all for pipe-prefixed forms like < | DSML | function_calls> that may not
+// be caught by DSML_TAG_RE when the pipe appears before the DSML keyword with extra spacing.
+const DSML_CATCH_ALL_RE = /< *\|[^>]*DSML[^>]*>[\s\S]*?< *\/[^>]*DSML[^>]*>/g;
 const TOOL_CALL_TAG_RE = /<\s*(?:function_calls|invoke(?:\s[^>]*)?)>[\s\S]*?<\/\s*(?:function_calls|invoke)\s*>/g;
 const PARAMETER_TAG_RE = /<\s*parameter(?:\s[^>]*)?>[\s\S]*?<\/\s*parameter\s*>/g;
+// Orphan closing tags left over after nested pair stripping
+const DSML_ORPHAN_CLOSE_RE = /< *\/[\s|]*DSML[\s|]*[^>]*>/g;
+const TOOL_ORPHAN_CLOSE_RE = /<\/\s*(?:function_calls|invoke|parameter)\s*>/g;
 
-export function sanitizeContent(text: string): string {
+function applyTagStrippers(text: string): string {
   return text
+    .replace(DSML_CATCH_ALL_RE, '')
     .replace(DSML_TAG_RE, '')
     .replace(TOOL_CALL_TAG_RE, '')
     .replace(PARAMETER_TAG_RE, '')
-    .trimEnd();
+    .replace(DSML_ORPHAN_CLOSE_RE, '')
+    .replace(TOOL_ORPHAN_CLOSE_RE, '');
+}
+
+export function sanitizeContent(text: string): string {
+  let result = text;
+  let prev: string;
+  // Loop until stable: each pass strips one nesting level of tags.
+  // Cap at 10 iterations to guard against pathological input.
+  for (let i = 0; i < 10; i++) {
+    prev = result;
+    result = applyTagStrippers(prev);
+    if (result === prev) break;
+  }
+  return result.trimEnd();
 }
 
 /**
@@ -25,27 +49,23 @@ export function sanitizeContent(text: string): string {
  * so that remainder text after a tag is preserved for further processing.
  */
 function stripTagsOnly(text: string): string {
-  return text
-    .replace(DSML_TAG_RE, '')
-    .replace(TOOL_CALL_TAG_RE, '')
-    .replace(PARAMETER_TAG_RE, '');
+  return applyTagStrippers(text);
 }
 
 /**
  * Regex to detect whether a `<`-prefixed buffer could be the opening of a
  * DSML/tool-call tag we need to strip.  Matches things like:
  *   < | DSML …    <DSML …    <function_calls    <invoke    <parameter
- *   and their closing forms:  </function_calls  </invoke  </parameter
+ *   and their closing forms:  </ | DSML …    </function_calls  </invoke  </parameter
  */
-const MAYBE_TAG_RE = /^<(?:\s*\|\s*)?\/? *(?:DSML|function_calls|invoke|parameter)/i;
+const MAYBE_TAG_RE = /^<[\s|]*\/?[\s|]*(?:DSML|function_calls|invoke|parameter)/i;
 
 /**
  * Number of characters (from the `<`) we need to accumulate before we can
- * rule out that a `<` starts a DSML tag.  The longest opening keyword is
- * "function_calls" (14 chars), plus the leading `<`, giving 15.  We use 20
- * for a 5-character safety margin.
+ * rule out that a `<` starts a DSML tag.  The longest pipe-delimited opening
+ * like "< | DSML | function_calls>" is ~26 chars.  We use 40 for a safety margin.
  */
-const TAG_LOOKAHEAD = 20;
+const TAG_LOOKAHEAD = 40;
 
 /** If the buffer grows beyond this size, flush it regardless. */
 const MAX_BUFFER = 10_000;
