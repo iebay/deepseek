@@ -315,7 +315,14 @@ export default function SearchPanel() {
                     {match.line}
                   </span>
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    {highlightMatch(match.text.trimStart(), match.matchStart - (match.text.length - match.text.trimStart().length), match.matchEnd - (match.text.length - match.text.trimStart().length))}
+                    {(() => {
+                      const leadingWhitespaceLength = match.text.length - match.text.trimStart().length;
+                      return highlightMatch(
+                        match.text.trimStart(),
+                        match.matchStart - leadingWhitespaceLength,
+                        match.matchEnd - leadingWhitespaceLength,
+                      );
+                    })()}
                   </div>
                   <X
                     size={10}
