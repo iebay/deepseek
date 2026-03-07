@@ -38,7 +38,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
   }
 
   return (
-    <div className="my-2 rounded-lg overflow-hidden border border-[var(--border-primary)]">
+    <div className="my-2 rounded-lg overflow-hidden border border-[var(--border-primary)] max-w-full">
       <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)]">
         <span className="text-[10px] text-[var(--text-secondary)] font-mono">{language || '代码'}</span>
         <button
@@ -230,11 +230,11 @@ function MessageBubble({
       <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[var(--accent-primary)]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
         {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
-      <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+      <div className={`max-w-[85%] min-w-0 ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
         {!isUser && (toolActions || isToolLoading) && (
           <ToolTrace actions={toolActions ?? []} isLoading={isToolLoading} />
         )}
-        <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[var(--accent-bg)] text-[var(--text-primary)] rounded-tr-sm' : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)] rounded-tl-sm'}`}>
+        <div className={`rounded-xl px-3 py-2 text-sm break-words overflow-hidden w-full ${isUser ? 'bg-[var(--accent-bg)] text-[var(--text-primary)] rounded-tr-sm' : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)] rounded-tl-sm'}`}>
           {isUser ? (
             renderUserContent()
           ) : (
@@ -703,7 +703,7 @@ export default function ChatPanel() {
         {chatMessages.length === 0 ? (
           <SuggestionCards onSelect={(prompt) => handleSend(prompt)} />
         ) : (
-          <div className="p-3">
+          <div className="p-3 overflow-hidden">
             {chatMessages.map((msg, i) => (
               <MessageBubble
                 key={i}
