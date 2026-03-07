@@ -25,12 +25,13 @@ interface StreamAIChatOptions {
 
 export interface ToolCallEvent {
   tool: string;
+  toolCallId: string;
   args: Record<string, unknown>;
 }
 
 export interface SmartChatCallbacks extends StreamAIChatOptions {
   onToolCall?: (event: ToolCallEvent) => void;
-  onToolResult?: (tool: string, summary: string) => void;
+  onToolResult?: (toolCallId: string, tool: string, summary: string) => void;
   onThinking?: (message: string) => void;
 }
 
@@ -154,10 +155,14 @@ export function streamSmartChat(options: SmartChatCallbacks): () => void {
                 onChunk(parsed.content as string);
               }
               if (parsed.type === 'tool_call' && onToolCall) {
-                onToolCall({ tool: parsed.tool as string, args: parsed.args as Record<string, unknown> });
+                onToolCall({
+                  tool: parsed.tool as string,
+                  toolCallId: parsed.toolCallId as string,
+                  args: parsed.args as Record<string, unknown>,
+                });
               }
               if (parsed.type === 'tool_result' && onToolResult) {
-                onToolResult(parsed.tool as string, parsed.summary as string);
+                onToolResult(parsed.toolCallId as string, parsed.tool as string, parsed.summary as string);
               }
               if (parsed.type === 'thinking' && onThinking) {
                 onThinking(parsed.message as string);

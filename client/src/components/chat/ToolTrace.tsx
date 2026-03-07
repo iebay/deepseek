@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 
 export interface ToolAction {
+  toolCallId: string;
   tool: string;
   args: Record<string, unknown>;
   summary: string;

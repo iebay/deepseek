@@ -255,16 +255,17 @@ export async function streamSmartChat(
         try {
           args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
         } catch {
+          // Malformed JSON from the model; proceed with empty args rather than failing
           args = {};
         }
 
-        sseEvent(res, { type: 'tool_call', tool: toolName, args });
+        sseEvent(res, { type: 'tool_call', tool: toolName, toolCallId: toolCall.id, args });
 
         const result = await runTool(toolName, args, projectRoot);
         const truncated = truncateResult(result);
         const summary = buildToolSummary(toolName, args, result);
 
-        sseEvent(res, { type: 'tool_result', tool: toolName, summary });
+        sseEvent(res, { type: 'tool_result', tool: toolName, toolCallId: toolCall.id, summary });
 
         loopMessages.push({
           role: 'tool',

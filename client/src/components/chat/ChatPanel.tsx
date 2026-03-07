@@ -422,7 +422,7 @@ export default function ChatPanel() {
     const useSmartMode = smartMode && !!currentProject?.path;
 
     if (useSmartMode) {
-      // Initialise live tool actions tracking for this assistant message
+      // Initialize live tool actions tracking for this assistant message
       setLoadingMsgIndex(assistantMsgIndex);
       setMessageToolActions(prev => {
         const next = new Map(prev);
@@ -464,21 +464,19 @@ export default function ChatPanel() {
           setMessageToolActions(prev => {
             const next = new Map(prev);
             const existing = next.get(assistantMsgIndex) ?? [];
-            // Add placeholder with empty summary; will be updated on tool_result
-            next.set(assistantMsgIndex, [...existing, { tool: event.tool, args: event.args, summary: '...' }]);
+            // Add placeholder with pending summary; updated when tool_result arrives
+            next.set(assistantMsgIndex, [...existing, { toolCallId: event.toolCallId, tool: event.tool, args: event.args, summary: '...' }]);
             return next;
           });
         },
-        onToolResult: (tool, summary) => {
+        onToolResult: (toolCallId, _tool, summary) => {
           setMessageToolActions(prev => {
             const next = new Map(prev);
             const existing = [...(next.get(assistantMsgIndex) ?? [])];
-            // Update the last action with matching tool name that has placeholder summary
-            for (let i = existing.length - 1; i >= 0; i--) {
-              if (existing[i].tool === tool && existing[i].summary === '...') {
-                existing[i] = { ...existing[i], summary };
-                break;
-              }
+            // Match by toolCallId for reliable identification even with duplicate tool types
+            const idx = existing.findIndex(a => a.toolCallId === toolCallId);
+            if (idx >= 0) {
+              existing[idx] = { ...existing[idx], summary };
             }
             next.set(assistantMsgIndex, existing);
             return next;
