@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { validateRootParam } from '../utils/pathUtils';
@@ -77,11 +77,12 @@ router.post('/install', (req: Request, res: Response) => {
     }
   }
 
-  const devFlag = isDev ? ' --save-dev' : '';
-  const pkgList = packages.join(' ');
+  const devFlag = isDev ? ['--save-dev'] : [];
   const resolvedRoot = path.resolve(validRoot);
-  exec(
-    `npm install ${pkgList}${devFlag}`,
+  // 使用 execFile 避免通过 shell 执行，防止命令注入风险
+  execFile(
+    'npm',
+    ['install', ...packages, ...devFlag],
     { cwd: resolvedRoot, timeout: 120_000 },
     (error, stdout, stderr) => {
       if (error) return res.status(500).json({ error: stderr || error.message });
@@ -110,10 +111,11 @@ router.post('/uninstall', (req: Request, res: Response) => {
     }
   }
 
-  const pkgList = packages.join(' ');
   const resolvedRoot = path.resolve(validRoot);
-  exec(
-    `npm uninstall ${pkgList}`,
+  // 使用 execFile 避免通过 shell 执行，防止命令注入风险
+  execFile(
+    'npm',
+    ['uninstall', ...packages],
     { cwd: resolvedRoot, timeout: 120_000 },
     (error, stdout, stderr) => {
       if (error) return res.status(500).json({ error: stderr || error.message });
@@ -142,10 +144,11 @@ router.post('/update', (req: Request, res: Response) => {
     }
   }
 
-  const pkgList = packages.join(' ');
   const resolvedRoot = path.resolve(validRoot);
-  exec(
-    `npm update ${pkgList}`,
+  // 使用 execFile 避免通过 shell 执行，防止命令注入风险
+  execFile(
+    'npm',
+    ['update', ...packages],
     { cwd: resolvedRoot, timeout: 120_000 },
     (error, stdout, stderr) => {
       if (error) return res.status(500).json({ error: stderr || error.message });
@@ -165,8 +168,10 @@ router.get('/outdated', (req: Request, res: Response) => {
     return res.status(404).json({ error: '当前项目没有 package.json' });
   }
 
-  exec(
-    'npm outdated --json',
+  // 使用 execFile 避免通过 shell 执行
+  execFile(
+    'npm',
+    ['outdated', '--json'],
     { cwd: resolvedRoot, timeout: 60_000 },
     (_error, stdout) => {
       // npm outdated exits with code 1 when there are outdated packages — not a real error

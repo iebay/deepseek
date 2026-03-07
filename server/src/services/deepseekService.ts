@@ -2,6 +2,9 @@ import OpenAI from 'openai';
 import type { Response } from 'express';
 import { loadProjectMemory } from './memoryService';
 import { sanitizeContent } from '../utils/sanitize';
+import { SSEWriter } from '../utils/sse';
+import { buildContextWithBudget } from '../utils/contextBudget';
+import { getOpenAIClient } from './openaiClient';
 
 export interface MultimodalContentPart {
   type: 'text' | 'image_url';
@@ -93,28 +96,24 @@ export async function streamChat(
   model: string,
   res: Response
 ): Promise<void> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
+  const client = getOpenAIClient();
+  if (!client) {
     res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
     return;
   }
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-    timeout: 60_000,
-    maxRetries: 2,
-  });
+  // 按预算截断上下文，防止超出 token 限制
+  const budgeted = buildContextWithBudget(context);
 
   const systemContent = [
     SYSTEM_PROMPT,
     '\n\n---\n\n## 当前项目上下文\n',
-    context.fileTree ? `### 项目文件树\n\`\`\`\n${context.fileTree}\n\`\`\`\n` : '',
+    budgeted.fileTree ? `### 项目文件树\n\`\`\`\n${budgeted.fileTree}\n\`\`\`\n` : '',
     context.techStack?.length ? `### 技术栈\n${context.techStack.join(', ')}\n` : '',
     context.currentFile ? `### 当前打开的文件\n路径: \`${context.currentFile}\`\n` : '',
-    context.currentFileContent ? `### 当前文件内容\n\`\`\`\n${context.currentFileContent}\n\`\`\`\n` : `### 提示\n如果没有提供当前文件内容，说明用户还没有打开任何文件。你仍然可以基于文件树分析项目结构，并建议用户打开相关文件或切换到 Agent 模式来进行多文件操作。\n`,
-    context.relatedFiles?.length
-      ? `### 用户提到的相关文件\n${context.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
+    budgeted.currentFileContent ? `### 当前文件内容\n\`\`\`\n${budgeted.currentFileContent}\n\`\`\`\n` : `### 提示\n如果没有提供当前文件内容，说明用户还没有打开任何文件。你仍然可以基于文件树分析项目结构，并建议用户打开相关文件或切换到 Agent 模式来进行多文件操作。\n`,
+    budgeted.relatedFiles?.length
+      ? `### 用户提到的相关文件\n${budgeted.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
       : '',
     context.projectRoot ? (() => {
       const memory = loadProjectMemory(context.projectRoot);
@@ -136,11 +135,9 @@ export async function streamChat(
     }),
   ];
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.flushHeaders();
+  // 初始化 SSE 写入器并启动心跳保活
+  const sse = new SSEWriter(res);
+  sse.startHeartbeat();
 
   try {
     const stream = await client.chat.completions.create({
@@ -155,11 +152,11 @@ export async function streamChat(
       if (delta) {
         const clean = sanitizeContent(delta);
         if (clean) {
-          res.write(`data: ${JSON.stringify({ content: clean })}\n\n`);
+          sse.send({ content: clean });
         }
       }
       if (chunk.usage) {
-        res.write(`data: ${JSON.stringify({
+        sse.send({
           type: 'usage',
           usage: {
             promptTokens: chunk.usage.prompt_tokens,
@@ -168,15 +165,13 @@ export async function streamChat(
           },
           model,
           timestamp: Date.now(),
-        })}\n\n`);
+        });
       }
     }
 
-    res.write('data: [DONE]\n\n');
-    res.end();
+    sse.done();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
-    res.end();
+    sse.error(msg);
   }
 }

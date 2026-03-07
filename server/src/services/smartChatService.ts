@@ -5,6 +5,9 @@ import { loadProjectMemory } from './memoryService';
 import type { ChatMessage, ProjectContext } from './deepseekService';
 import { supportsToolCalling } from '../constants/models';
 import { sanitizeContent } from '../utils/sanitize';
+import { SSEWriter } from '../utils/sse';
+import { buildContextWithBudget, truncateResult } from '../utils/contextBudget';
+import { getOpenAIClient } from './openaiClient';
 
 const SMART_CHAT_TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
   {
@@ -102,15 +105,9 @@ const SMART_CHAT_BASE_PROMPT = `你是 DeepSeek Code AI 助手——一个集成
 \`\`\``;
 
 const MAX_TOOL_ITERATIONS = 5;
-const MAX_RESULT_LENGTH = 3000;
 
-function truncateResult(str: string): string {
-  if (str.length <= MAX_RESULT_LENGTH) return str;
-  return str.slice(0, MAX_RESULT_LENGTH) + `\n...[已截断]`;
-}
-
-function sseEvent(res: Response, data: Record<string, unknown>): void {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
+function sseEvent(sse: SSEWriter, data: Record<string, unknown>): void {
+  sse.send(data);
 }
 
 function buildToolSummary(toolName: string, args: Record<string, unknown>, result: string): string {
@@ -142,38 +139,32 @@ export async function streamSmartChat(
   model: string,
   res: Response,
 ): Promise<void> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
+  const client = getOpenAIClient();
+  if (!client) {
     res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
     return;
   }
 
   const projectRoot = context.projectRoot || '';
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.flushHeaders();
+  // 初始化 SSE 写入器并启动心跳保活
+  const sse = new SSEWriter(res);
+  sse.startHeartbeat();
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-    timeout: 60_000,
-    maxRetries: 2,
-  });
+  // 按预算截断上下文，防止超出 token 限制
+  const budgeted = buildContextWithBudget(context);
 
   const memory = projectRoot ? loadProjectMemory(projectRoot) : null;
 
   const systemContent = [
     SMART_CHAT_BASE_PROMPT,
     '\n\n---\n\n## 当前项目上下文\n',
-    context.fileTree ? `### 项目文件树\n\`\`\`\n${context.fileTree}\n\`\`\`\n` : '',
+    budgeted.fileTree ? `### 项目文件树\n\`\`\`\n${budgeted.fileTree}\n\`\`\`\n` : '',
     context.techStack?.length ? `### 技术栈\n${context.techStack.join(', ')}\n` : '',
     context.currentFile ? `### 当前打开的文件\n路径: \`${context.currentFile}\`\n` : '',
-    context.currentFileContent ? `### 当前文件内容\n\`\`\`\n${context.currentFileContent}\n\`\`\`\n` : '',
-    context.relatedFiles?.length
-      ? `### 用户提到的相关文件\n${context.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
+    budgeted.currentFileContent ? `### 当前文件内容\n\`\`\`\n${budgeted.currentFileContent}\n\`\`\`\n` : '',
+    budgeted.relatedFiles?.length
+      ? `### 用户提到的相关文件\n${budgeted.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
       : '',
     memory ? `\n\n---\n## 项目 AI 记忆（必须遵守）\n\n${memory}` : '',
     '\n注意: 以上项目信息是实时的。你可以通过工具调用主动读取更多文件来深入排查问题。',
@@ -192,7 +183,7 @@ export async function streamSmartChat(
     }),
   ];
 
-  sseEvent(res, { type: 'thinking', message: '正在分析...' });
+  sseEvent(sse, { type: 'thinking', message: '正在分析...' });
 
   try {
     // deepseek-reasoner (R1) does not support function calling — stream directly
@@ -208,15 +199,14 @@ export async function streamSmartChat(
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) {
           const clean = sanitizeContent(delta);
-          if (clean) sseEvent(res, { type: 'content', content: clean });
+          if (clean) sseEvent(sse, { type: 'content', content: clean });
         }
         if (chunk.usage) {
-          sseEvent(res, { type: 'usage', usage: chunk.usage, model });
+          sseEvent(sse, { type: 'usage', usage: chunk.usage, model });
         }
       }
 
-      res.write('data: [DONE]\n\n');
-      res.end();
+      sse.done();
       return;
     }
 
@@ -250,15 +240,14 @@ export async function streamSmartChat(
           const delta = chunk.choices[0]?.delta?.content;
           if (delta) {
             const clean = sanitizeContent(delta);
-            if (clean) sseEvent(res, { type: 'content', content: clean });
+            if (clean) sseEvent(sse, { type: 'content', content: clean });
           }
           if (chunk.usage) {
-            sseEvent(res, { type: 'usage', usage: chunk.usage, model });
+            sseEvent(sse, { type: 'usage', usage: chunk.usage, model });
           }
         }
 
-        res.write('data: [DONE]\n\n');
-        res.end();
+        sse.done();
         return;
       }
 
@@ -280,13 +269,13 @@ export async function streamSmartChat(
           args = {};
         }
 
-        sseEvent(res, { type: 'tool_call', tool: toolName, toolCallId: toolCall.id, args });
+        sseEvent(sse, { type: 'tool_call', tool: toolName, toolCallId: toolCall.id, args });
 
         const result = await runTool(toolName, args, projectRoot);
         const truncated = truncateResult(result);
         const summary = buildToolSummary(toolName, args, result);
 
-        sseEvent(res, { type: 'tool_result', tool: toolName, toolCallId: toolCall.id, summary });
+        sseEvent(sse, { type: 'tool_result', tool: toolName, toolCallId: toolCall.id, summary });
 
         loopMessages.push({
           role: 'tool',
@@ -297,7 +286,7 @@ export async function streamSmartChat(
     }
 
     // Max iterations reached — do a final streaming call without tools
-    sseEvent(res, { type: 'thinking', message: '正在整理结果...' });
+    sseEvent(sse, { type: 'thinking', message: '正在整理结果...' });
 
     const finalStream = await client.chat.completions.create({
       model,
@@ -311,18 +300,16 @@ export async function streamSmartChat(
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) {
         const clean = sanitizeContent(delta);
-        if (clean) sseEvent(res, { type: 'content', content: clean });
+        if (clean) sseEvent(sse, { type: 'content', content: clean });
       }
       if (chunk.usage) {
-        sseEvent(res, { type: 'usage', usage: chunk.usage, model });
+        sseEvent(sse, { type: 'usage', usage: chunk.usage, model });
       }
     }
 
-    res.write('data: [DONE]\n\n');
-    res.end();
+    sse.done();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    sseEvent(res, { error: msg });
-    res.end();
+    sse.error(msg);
   }
 }

@@ -6,17 +6,14 @@ import { runTool } from './toolRunner';
 import type { ChatMessage, ProjectContext } from '../services/deepseekService';
 import { supportsToolCalling } from '../constants/models';
 import { sanitizeContent } from '../utils/sanitize';
+import { SSEWriter } from '../utils/sse';
+import { buildContextWithBudget, truncateResult } from '../utils/contextBudget';
+import { getOpenAIClient } from '../services/openaiClient';
 
 const MAX_ITERATIONS = 15;
-const MAX_RESULT_LENGTH = 3000;
 
-function truncateResult(str: string): string {
-  if (str.length <= MAX_RESULT_LENGTH) return str;
-  return str.slice(0, MAX_RESULT_LENGTH) + `\n...[已截断]`;
-}
-
-function sseWrite(res: Response, event: string, data: Record<string, unknown>): void {
-  res.write(`data: ${JSON.stringify({ event, ...data })}\n\n`);
+function sseWrite(sse: SSEWriter, event: string, data: Record<string, unknown>): void {
+  sse.send({ event, ...data });
 }
 
 export async function runAgent(
@@ -25,34 +22,28 @@ export async function runAgent(
   model: string,
   res: Response,
 ): Promise<void> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
+  const client = getOpenAIClient();
+  if (!client) {
     res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
     return;
   }
 
   const projectRoot = context.projectRoot || '';
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.flushHeaders();
+  // 初始化 SSE 写入器并启动心跳保活
+  const sse = new SSEWriter(res);
+  sse.startHeartbeat();
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-    timeout: 60_000,
-    maxRetries: 2,
-  });
+  // 按预算截断上下文，防止超出 token 限制
+  const budgeted = buildContextWithBudget(context);
 
   const systemContent = [
     AGENT_SYSTEM_PROMPT,
     '\n\n---\n\n## 当前项目上下文\n',
-    context.fileTree ? `### 项目文件树\n\`\`\`\n${context.fileTree}\n\`\`\`\n` : '',
+    budgeted.fileTree ? `### 项目文件树\n\`\`\`\n${budgeted.fileTree}\n\`\`\`\n` : '',
     context.techStack?.length ? `### 技术栈\n${context.techStack.join(', ')}\n` : '',
     context.currentFile ? `### 当前打开的文件\n路径: \`${context.currentFile}\`\n` : '',
-    context.currentFileContent ? `### 当前文件内容\n\`\`\`\n${context.currentFileContent}\n\`\`\`\n` : '',
+    budgeted.currentFileContent ? `### 当前文件内容\n\`\`\`\n${budgeted.currentFileContent}\n\`\`\`\n` : '',
     projectRoot ? `### 项目根目录\n${projectRoot}\n` : '',
   ].filter(Boolean).join('');
 
@@ -86,23 +77,22 @@ export async function runAgent(
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) {
           const clean = sanitizeContent(delta);
-          if (clean) sseWrite(res, 'content', { content: clean });
+          if (clean) sseWrite(sse, 'content', { content: clean });
         }
         if (chunk.usage) {
-          sseWrite(res, 'usage', { usage: chunk.usage, model });
+          sseWrite(sse, 'usage', { usage: chunk.usage, model });
         }
       }
 
-      sseWrite(res, 'done', { iterations: 0 });
-      res.write('data: [DONE]\n\n');
-      res.end();
+      sseWrite(sse, 'done', { iterations: 0 });
+      sse.done();
       return;
     }
 
     while (iterations < MAX_ITERATIONS && !taskComplete) {
       iterations++;
 
-      sseWrite(res, 'thinking', { iteration: iterations, message: `第 ${iterations} 步：思考中...` });
+      sseWrite(sse, 'thinking', { iteration: iterations, message: `第 ${iterations} 步：思考中...` });
 
       const response = await client.chat.completions.create({
         model,
@@ -114,7 +104,7 @@ export async function runAgent(
 
       const choice = response.choices[0];
       if (!choice) {
-        sseWrite(res, 'error', { message: 'AI 未返回任何响应' });
+        sseWrite(sse, 'error', { message: 'AI 未返回任何响应' });
         break;
       }
 
@@ -122,7 +112,7 @@ export async function runAgent(
 
       if (assistantMessage.content) {
         const clean = sanitizeContent(assistantMessage.content);
-        if (clean) sseWrite(res, 'content', { content: clean });
+        if (clean) sseWrite(sse, 'content', { content: clean });
       }
 
       if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
@@ -145,12 +135,12 @@ export async function runAgent(
           toolArgs = {};
         }
 
-        sseWrite(res, 'tool_call', { tool: toolName, args: toolArgs });
+        sseWrite(sse, 'tool_call', { tool: toolName, args: toolArgs });
 
         const result = await runTool(toolName, toolArgs, projectRoot);
         const truncated = truncateResult(result);
 
-        sseWrite(res, 'tool_result', { tool: toolName, result: truncated });
+        sseWrite(sse, 'tool_result', { tool: toolName, result: truncated });
 
         messages.push({
           role: 'tool',
@@ -168,13 +158,11 @@ export async function runAgent(
       if (choice.finish_reason === 'stop') break;
     }
 
-    sseWrite(res, 'done', { iterations });
-    res.write('data: [DONE]\n\n');
-    res.end();
+    sseWrite(sse, 'done', { iterations });
+    sse.done();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    sseWrite(res, 'error', { message: msg });
-    res.write('data: [DONE]\n\n');
-    res.end();
+    sseWrite(sse, 'error', { message: msg });
+    sse.done();
   }
 }
