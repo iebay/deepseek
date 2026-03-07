@@ -93,21 +93,21 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#30363d]">
-          <Search size={15} className="text-[#8b949e] shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-primary)]">
+          <Search size={15} className="text-[var(--text-secondary)] shrink-0" />
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-[#e6edf3] text-sm placeholder-[#6e7681] outline-none"
+            className="flex-1 bg-transparent text-[var(--text-primary)] text-sm placeholder-[var(--text-tertiary)] outline-none"
             placeholder="搜索命令..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <div className="flex items-center gap-1 text-[10px] text-[#6e7681] border border-[#30363d] rounded px-1.5 py-0.5">
+          <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] border border-[var(--border-primary)] rounded px-1.5 py-0.5">
             <Command size={10} />
             <span>Esc</span>
           </div>
@@ -116,20 +116,20 @@ export default function CommandPalette({ onClose }: CommandPaletteProps) {
         {/* Command list */}
         <div className="max-h-80 overflow-y-auto py-1">
           {filtered.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-[#6e7681]">未找到命令</div>
+            <div className="px-4 py-6 text-center text-xs text-[var(--text-tertiary)]">未找到命令</div>
           ) : (
             filtered.map((cmd, i) => (
               <button
                 key={cmd.id}
                 className={`flex items-center justify-between w-full px-4 py-2.5 text-sm text-left transition-colors ${
-                  i === selected ? 'bg-[#388bfd]/15 text-[#e6edf3]' : 'text-[#8b949e] hover:bg-[#21262d] hover:text-[#e6edf3]'
+                  i === selected ? 'bg-[var(--accent-bg)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
                 }`}
                 onClick={cmd.action}
                 onMouseEnter={() => setSelected(i)}
               >
                 <span>{cmd.label}</span>
                 {cmd.description && (
-                  <span className="text-[10px] text-[#6e7681] ml-2 shrink-0">{cmd.description}</span>
+                  <span className="text-[10px] text-[var(--text-tertiary)] ml-2 shrink-0">{cmd.description}</span>
                 )}
               </button>
             ))

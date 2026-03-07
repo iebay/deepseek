@@ -165,30 +165,30 @@ export default function ProjectSelector() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] flex flex-col items-center justify-start p-4 pt-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-start p-4 pt-12 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#388bfd]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#238636]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--accent-bg)] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--success-solid)]/5 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#8957e5]/3 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-2xl relative">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#388bfd]/20 to-[#388bfd]/5 rounded-2xl mb-4 border border-[#388bfd]/20">
-            <Cpu size={28} className="text-[#388bfd]" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[var(--accent-bg-heavy)] to-[var(--accent-bg)] rounded-2xl mb-4 border border-[var(--accent-border)]">
+            <Cpu size={28} className="text-[var(--accent-primary)]" />
           </div>
           <h1 className="text-4xl font-bold mb-2 tracking-tight">
-            <span className="bg-gradient-to-r from-[#e6edf3] via-[#58a6ff] to-[#388bfd] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--text-primary)] via-[var(--accent-hover)] to-[#388bfd] bg-clip-text text-transparent">
               DeepSeek Code
             </span>
           </h1>
-          <p className="text-[#8b949e]">AI 驱动的智能代码编辑平台</p>
+          <p className="text-[var(--text-secondary)]">AI 驱动的智能代码编辑平台</p>
           <div className="flex items-center justify-center gap-5 mt-4">
             {features.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 text-xs text-[#6e7681]">
-                <Icon size={13} className="text-[#388bfd]" />
+              <div key={label} className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
+                <Icon size={13} className="text-[var(--accent-primary)]" />
                 <span>{label}</span>
               </div>
             ))}
@@ -196,13 +196,13 @@ export default function ProjectSelector() {
         </div>
 
         {/* Tab switcher */}
-        <div className="flex gap-1 bg-[#161b22] border border-[#30363d] rounded-xl p-1 mb-4">
+        <div className="flex gap-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-1 mb-4">
           <button
             onClick={() => { setTab('open'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'open'
-                ? 'bg-[#388bfd] text-white shadow-lg shadow-[#388bfd]/20'
-                : 'text-[#8b949e] hover:text-[#e6edf3]'
+                ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             <FolderOpen size={15} />
@@ -212,8 +212,8 @@ export default function ProjectSelector() {
             onClick={() => { setTab('clone'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'clone'
-                ? 'bg-[#388bfd] text-white shadow-lg shadow-[#388bfd]/20'
-                : 'text-[#8b949e] hover:text-[#e6edf3]'
+                ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             <Download size={15} />
@@ -223,8 +223,8 @@ export default function ProjectSelector() {
             onClick={() => { setTab('new'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'new'
-                ? 'bg-[#388bfd] text-white shadow-lg shadow-[#388bfd]/20'
-                : 'text-[#8b949e] hover:text-[#e6edf3]'
+                ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             <Plus size={15} />
@@ -236,7 +236,7 @@ export default function ProjectSelector() {
         {tab === 'open' ? (
           <div className="space-y-4">
             {/* Open project card */}
-            <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-xl">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-5 shadow-xl">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -244,12 +244,12 @@ export default function ProjectSelector() {
                   onChange={(e) => setPath(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleOpen()}
                   placeholder="输入项目路径，例如: /home/user/my-project"
-                  className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+                  className="flex-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                 />
                 <button
                   onClick={() => handleOpen()}
                   disabled={loading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#388bfd] hover:bg-[#58a6ff] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <FolderOpen size={16} />}
                   打开
@@ -257,7 +257,7 @@ export default function ProjectSelector() {
               </div>
 
               {error && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-lg px-3 py-2">
+                <div className="mt-3 flex items-center gap-2 text-sm text-[var(--error)] bg-[var(--error-bg)] rounded-lg px-3 py-2">
                   <AlertCircle size={14} />
                   {error}
                 </div>
@@ -266,44 +266,44 @@ export default function ProjectSelector() {
 
             {/* Recent projects */}
             {recentProjects.length > 0 && (
-              <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 shadow-xl">
+              <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-4 shadow-xl">
                 <div className="flex items-center gap-2 mb-3 px-1">
-                  <Clock size={13} className="text-[#8b949e]" />
-                  <span className="text-xs text-[#8b949e] font-semibold uppercase tracking-widest">最近项目</span>
+                  <Clock size={13} className="text-[var(--text-secondary)]" />
+                  <span className="text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-widest">最近项目</span>
                 </div>
                 <div className="grid grid-cols-1 gap-1">
                   {recentProjects.map((project) => (
                     <div
                       key={project.path}
-                      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#21262d] transition-colors"
+                      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors"
                       title={project.path}
                     >
                       <button
                         className="flex items-center gap-3 flex-1 min-w-0 text-left"
                         onClick={() => handleOpen(project.path)}
                       >
-                        <div className="w-9 h-9 bg-[#21262d] group-hover:bg-[#30363d] rounded-xl flex items-center justify-center shrink-0 transition-colors">
-                          <Code2 size={15} className="text-[#388bfd]" />
+                        <div className="w-9 h-9 bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-hover)] rounded-xl flex items-center justify-center shrink-0 transition-colors">
+                          <Code2 size={15} className="text-[var(--accent-primary)]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-[#e6edf3] font-medium truncate">
+                          <div className="text-sm text-[var(--text-primary)] font-medium truncate">
                             {project.name || project.path.split('/').pop()}
                           </div>
-                          <div className="text-xs text-[#6e7681] truncate">{project.path}</div>
+                          <div className="text-xs text-[var(--text-tertiary)] truncate">{project.path}</div>
                         </div>
                       </button>
                       <div className="flex items-center gap-2 shrink-0">
                         {project.lastOpened && (
-                          <span className="text-[10px] text-[#6e7681]">{formatLastOpened(project.lastOpened)}</span>
+                          <span className="text-[10px] text-[var(--text-tertiary)]">{formatLastOpened(project.lastOpened)}</span>
                         )}
                         <button
                           onClick={(e) => handleRemoveRecent(e, project.path)}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-all"
                           title="从列表移除"
                         >
                           <Trash2 size={12} />
                         </button>
-                        <ChevronRight size={13} className="text-[#6e7681] opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ChevronRight size={13} className="text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   ))}
@@ -312,14 +312,14 @@ export default function ProjectSelector() {
             )}
           </div>
         ) : tab === 'clone' ? (
-          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-xl space-y-3">
-            <p className="text-xs text-[#8b949e] px-1">从 GitHub 克隆仓库到本地目录</p>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-5 shadow-xl space-y-3">
+            <p className="text-xs text-[var(--text-secondary)] px-1">从 GitHub 克隆仓库到本地目录</p>
             <input
               type="text"
               value={cloneUrl}
               onChange={(e) => setCloneUrl(e.target.value)}
               placeholder="仓库 URL，例如: https://github.com/user/repo.git"
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              className="w-full bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
             />
             <div className="flex gap-2">
               <input
@@ -328,29 +328,29 @@ export default function ProjectSelector() {
                 onChange={(e) => setCloneTarget(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleClone()}
                 placeholder="克隆目标路径，例如: /home/user/my-project"
-                className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+                className="flex-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               />
               <button
                 onClick={handleClone}
                 disabled={loading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--success-solid)] hover:bg-[var(--success-solid-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                 克隆
               </button>
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2 text-sm text-[var(--error)] bg-[var(--error-bg)] rounded-lg px-3 py-2">
                 <AlertCircle size={14} />
                 {error}
               </div>
             )}
           </div>
         ) : (
-          <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 shadow-xl">
-            <p className="text-xs text-[#8b949e] mb-3 px-1">选择一个模板快速开始</p>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-4 shadow-xl">
+            <p className="text-xs text-[var(--text-secondary)] mb-3 px-1">选择一个模板快速开始</p>
             {templatesError ? (
-              <div className="flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-lg px-3 py-3">
+              <div className="flex items-center gap-2 text-sm text-[var(--error)] bg-[var(--error-bg)] rounded-lg px-3 py-3">
                 <AlertCircle size={14} />
                 {templatesError}
               </div>
@@ -365,12 +365,12 @@ export default function ProjectSelector() {
         )}
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-[#6e7681]">
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-[var(--text-tertiary)]">
           <a
             href="https://github.com/iebay/deepseek"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-[#e6edf3] transition-colors"
+            className="flex items-center gap-1.5 hover:text-[var(--text-primary)] transition-colors"
           >
             <Github size={12} />
             GitHub

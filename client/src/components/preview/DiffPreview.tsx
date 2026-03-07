@@ -9,10 +9,10 @@ interface DiffPreviewProps {
 
 export default function DiffPreview({ original, modified, language = 'typescript', filename }: DiffPreviewProps) {
   return (
-    <div className="flex flex-col h-full bg-[#0d1117]">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
       {filename && (
-        <div className="px-3 py-2 border-b border-[#30363d] text-xs text-[#8b949e] shrink-0">
-          差异对比: <span className="text-[#e6edf3]">{filename}</span>
+        <div className="px-3 py-2 border-b border-[var(--border-primary)] text-xs text-[var(--text-secondary)] shrink-0">
+          差异对比: <span className="text-[var(--text-primary)]">{filename}</span>
         </div>
       )}
       <div className="flex-1">

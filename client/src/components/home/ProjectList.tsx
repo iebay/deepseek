@@ -44,7 +44,7 @@ function ProjectCard({ project, onOpen, onToggleFavorite, onRemove }: ProjectCar
 
   return (
     <div
-      className="relative group bg-[#161b22] border border-[#30363d] rounded-xl p-4 hover:border-[#388bfd]/50 transition-all duration-200 cursor-pointer"
+      className="relative group bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-4 hover:border-[var(--accent-border)] transition-all duration-200 cursor-pointer"
       onClick={() => onOpen(project)}
       onContextMenu={(e) => { e.preventDefault(); setShowMenu(v => !v); }}
     >
@@ -53,7 +53,7 @@ function ProjectCard({ project, onOpen, onToggleFavorite, onRemove }: ProjectCar
         className={`absolute top-2 right-2 p-1 rounded-lg transition-all z-10 ${
           project.isFavorite
             ? 'text-[#f0b72f] opacity-100'
-            : 'text-[#6e7681] opacity-0 group-hover:opacity-100 hover:text-[#f0b72f]'
+            : 'text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 hover:text-[#f0b72f]'
         }`}
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(project); }}
         title={project.isFavorite ? '取消收藏' : '收藏'}
@@ -62,18 +62,18 @@ function ProjectCard({ project, onOpen, onToggleFavorite, onRemove }: ProjectCar
       </button>
 
       {/* Icon */}
-      <div className="w-10 h-10 bg-[#21262d] group-hover:bg-[#30363d] rounded-xl flex items-center justify-center mb-3 transition-colors">
-        <Code2 size={18} className="text-[#388bfd]" />
+      <div className="w-10 h-10 bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-hover)] rounded-xl flex items-center justify-center mb-3 transition-colors">
+        <Code2 size={18} className="text-[var(--accent-primary)]" />
       </div>
 
       {/* Name */}
-      <div className="text-sm font-semibold text-[#e6edf3] truncate mb-1 pr-5">{project.name}</div>
+      <div className="text-sm font-semibold text-[var(--text-primary)] truncate mb-1 pr-5">{project.name}</div>
 
       {/* Tech stack */}
       {project.techStack.length > 0 ? (
         <div className="flex flex-wrap gap-1 mb-2">
           {project.techStack.slice(0, 2).map(t => (
-            <span key={t} className="text-[10px] text-[#388bfd] bg-[#388bfd]/10 px-1.5 py-0.5 rounded">
+            <span key={t} className="text-[10px] text-[var(--accent-primary)] bg-[var(--accent-bg)] px-1.5 py-0.5 rounded">
               {t}
             </span>
           ))}
@@ -84,7 +84,7 @@ function ProjectCard({ project, onOpen, onToggleFavorite, onRemove }: ProjectCar
 
       {/* Last opened */}
       {project.lastOpened && (
-        <div className="flex items-center gap-1 text-[10px] text-[#6e7681]">
+        <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
           <Clock size={10} />
           {formatRelativeTime(project.lastOpened)}
         </div>
@@ -92,7 +92,7 @@ function ProjectCard({ project, onOpen, onToggleFavorite, onRemove }: ProjectCar
 
       {/* Path tooltip on hover */}
       <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-20 pointer-events-none">
-        <div className="bg-[#21262d] border border-[#30363d] text-[10px] text-[#8b949e] px-2 py-1 rounded-lg max-w-[200px] truncate shadow-xl">
+        <div className="bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[10px] text-[var(--text-secondary)] px-2 py-1 rounded-lg max-w-[200px] truncate shadow-xl">
           {project.path}
         </div>
       </div>
@@ -104,22 +104,22 @@ function ProjectCard({ project, onOpen, onToggleFavorite, onRemove }: ProjectCar
             className="fixed inset-0 z-30"
             onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
           />
-          <div className="absolute top-8 right-2 z-40 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl py-1 min-w-[140px]">
+          <div className="absolute top-8 right-2 z-40 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-2xl py-1 min-w-[140px]">
             <button
-              className="w-full text-left px-3 py-2 text-xs text-[#e6edf3] hover:bg-[#21262d] flex items-center gap-2 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-2 transition-colors"
               onClick={(e) => { e.stopPropagation(); setShowMenu(false); onOpen(project); }}
             >
               <FolderOpen size={12} /> 打开项目
             </button>
             <button
-              className="w-full text-left px-3 py-2 text-xs text-[#e6edf3] hover:bg-[#21262d] flex items-center gap-2 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-2 transition-colors"
               onClick={(e) => { e.stopPropagation(); setShowMenu(false); onToggleFavorite(project); }}
             >
               <Star size={12} /> {project.isFavorite ? '取消收藏' : '收藏'}
             </button>
-            <div className="h-px bg-[#30363d] my-1" />
+            <div className="h-px bg-[var(--bg-hover)] my-1" />
             <button
-              className="w-full text-left px-3 py-2 text-xs text-[#f85149] hover:bg-[#f85149]/10 flex items-center gap-2 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-[var(--error)] hover:bg-[var(--error-bg)] flex items-center gap-2 transition-colors"
               onClick={(e) => { e.stopPropagation(); setShowMenu(false); onRemove(project); }}
             >
               <Trash2 size={12} /> 从列表移除
@@ -232,30 +232,30 @@ export default function ProjectList() {
   const all = filtered.filter(p => !p.isFavorite);
 
   return (
-    <div className="min-h-screen bg-[#0d1117] flex flex-col items-center justify-start p-4 pt-10 relative overflow-auto">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-start p-4 pt-10 relative overflow-auto">
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#388bfd]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#238636]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--accent-bg)] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--success-solid)]/5 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#8957e5]/3 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-4xl relative">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#388bfd]/20 to-[#388bfd]/5 rounded-2xl mb-4 border border-[#388bfd]/20">
-            <Cpu size={28} className="text-[#388bfd]" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[var(--accent-bg-heavy)] to-[var(--accent-bg)] rounded-2xl mb-4 border border-[var(--accent-border)]">
+            <Cpu size={28} className="text-[var(--accent-primary)]" />
           </div>
           <h1 className="text-4xl font-bold mb-2 tracking-tight">
-            <span className="bg-gradient-to-r from-[#e6edf3] via-[#58a6ff] to-[#388bfd] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--text-primary)] via-[var(--accent-hover)] to-[#388bfd] bg-clip-text text-transparent">
               DeepSeek Code
             </span>
           </h1>
-          <p className="text-[#8b949e]">AI 驱动的智能代码编辑平台</p>
+          <p className="text-[var(--text-secondary)]">AI 驱动的智能代码编辑平台</p>
           <div className="flex items-center justify-center gap-5 mt-4">
             {features.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 text-xs text-[#6e7681]">
-                <Icon size={13} className="text-[#388bfd]" />
+              <div key={label} className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
+                <Icon size={13} className="text-[var(--accent-primary)]" />
                 <span>{label}</span>
               </div>
             ))}
@@ -264,23 +264,23 @@ export default function ProjectList() {
 
         {/* Search bar */}
         <div className="relative mb-6">
-          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6e7681]" />
+          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索项目..."
-            className="w-full bg-[#161b22] border border-[#30363d] rounded-xl pl-10 pr-4 py-3 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+            className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl pl-10 pr-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
           />
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-[#8b949e]">
+          <div className="flex items-center justify-center py-20 text-[var(--text-secondary)]">
             <Loader2 size={20} className="animate-spin mr-2" />
             加载项目列表...
           </div>
         ) : error ? (
-          <div className="flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-xl px-4 py-3 mb-6">
+          <div className="flex items-center gap-2 text-sm text-[var(--error)] bg-[var(--error-bg)] rounded-xl px-4 py-3 mb-6">
             <AlertCircle size={14} />
             {error}
             <button
@@ -297,7 +297,7 @@ export default function ProjectList() {
               <section className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Star size={14} className="text-[#f0b72f]" fill="currentColor" />
-                  <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-widest">收藏项目</span>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest">收藏项目</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {favorites.map(p => (
@@ -317,8 +317,8 @@ export default function ProjectList() {
             {recent.length > 0 && (
               <section className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <Clock size={14} className="text-[#8b949e]" />
-                  <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-widest">最近项目</span>
+                  <Clock size={14} className="text-[var(--text-secondary)]" />
+                  <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest">最近项目</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {recent.map(p => (
@@ -338,9 +338,9 @@ export default function ProjectList() {
             {all.length > 0 && (
               <section className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <FolderOpen size={14} className="text-[#8b949e]" />
-                  <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-widest">所有项目</span>
-                  <span className="text-xs text-[#6e7681]">({all.length})</span>
+                  <FolderOpen size={14} className="text-[var(--text-secondary)]" />
+                  <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest">所有项目</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">({all.length})</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {all.map(p => (
@@ -357,7 +357,7 @@ export default function ProjectList() {
             )}
 
             {filtered.length === 0 && !loading && (
-              <div className="text-center py-16 text-[#6e7681]">
+              <div className="text-center py-16 text-[var(--text-tertiary)]">
                 <FolderOpen size={40} className="mx-auto mb-3 opacity-30" />
                 <p className="text-sm">
                   {search ? `没有找到匹配 "${search}" 的项目` : '暂无项目，请打开一个项目目录'}
@@ -368,10 +368,10 @@ export default function ProjectList() {
         )}
 
         {/* Open by path */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 shadow-xl mt-2">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-4 shadow-xl mt-2">
           <div className="flex items-center gap-2 mb-3">
-            <Plus size={14} className="text-[#8b949e]" />
-            <span className="text-xs font-semibold text-[#8b949e] uppercase tracking-widest">打开其他项目</span>
+            <Plus size={14} className="text-[var(--text-secondary)]" />
+            <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest">打开其他项目</span>
           </div>
           <div className="flex gap-2">
             <input
@@ -380,19 +380,19 @@ export default function ProjectList() {
               onChange={(e) => setOpenPath(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleOpenByPath()}
               placeholder="输入项目路径，例如: /home/user/my-project"
-              className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              className="flex-1 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
             />
             <button
               onClick={handleOpenByPath}
               disabled={openLoading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#388bfd] hover:bg-[#58a6ff] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
             >
               {openLoading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
               打开
             </button>
           </div>
           {openError && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-[#f85149] bg-[#f85149]/10 rounded-lg px-3 py-2">
+            <div className="mt-3 flex items-center gap-2 text-sm text-[var(--error)] bg-[var(--error-bg)] rounded-lg px-3 py-2">
               <AlertCircle size={14} />
               {openError}
             </div>
@@ -400,12 +400,12 @@ export default function ProjectList() {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-[#6e7681]">
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-[var(--text-tertiary)]">
           <a
             href="https://github.com/iebay/deepseek"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-[#e6edf3] transition-colors"
+            className="flex items-center gap-1.5 hover:text-[var(--text-primary)] transition-colors"
           >
             <Github size={12} />
             GitHub

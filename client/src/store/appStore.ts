@@ -76,6 +76,7 @@ interface AppState {
   openTabs: Tab[];
   activeTabPath: string | null;
   selectedModel: string;
+  theme: 'dark' | 'light';
   showPreview: boolean;
   showSidebar: boolean;
   showAIPanel: boolean;
@@ -110,6 +111,8 @@ interface AppState {
   updateTabContent: (path: string, content: string, isDirty: boolean) => void;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
   setSelectedModel: (model: string) => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
   togglePreview: () => void;
   toggleSidebar: () => void;
   toggleAIPanel: () => void;
@@ -151,6 +154,7 @@ export const useAppStore = create<AppState>()(
           openTabs: [],
           activeTabPath: null,
           selectedModel: 'deepseek-chat',
+          theme: 'dark' as const,
           showPreview: false,
           showSidebar: true,
           showAIPanel: true,
@@ -222,6 +226,17 @@ export const useAppStore = create<AppState>()(
             }),
 
           setSelectedModel: (model) => set({ selectedModel: model }),
+          setTheme: (theme) => {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            set({ theme });
+          },
+          toggleTheme: () => {
+            const next = get().theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            set({ theme: next });
+          },
           togglePreview: () => set((state) => ({ showPreview: !state.showPreview })),
           toggleSidebar: () => set((state) => ({ showSidebar: !state.showSidebar })),
           toggleAIPanel: () => set((state) => ({ showAIPanel: !state.showAIPanel })),
@@ -466,9 +481,14 @@ export const useAppStore = create<AppState>()(
           activeChatSessionId: state.activeChatSessionId,
           selectedModel: state.selectedModel,
           aiMode: state.aiMode,
+          theme: state.theme,
         }),
         onRehydrateStorage: () => (state) => {
           if (!state) return;
+          // Restore theme preference
+          const savedTheme = (localStorage.getItem('theme') as 'dark' | 'light') || state.theme || 'dark';
+          state.theme = savedTheme;
+          document.documentElement.setAttribute('data-theme', savedTheme);
           if (state.chatSessions.length === 0) {
             // Ensure there is always at least one session
             const fresh = createNewSession();

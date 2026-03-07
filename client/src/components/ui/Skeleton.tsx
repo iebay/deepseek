@@ -18,8 +18,8 @@ export function FileTreeSkeleton() {
           className="flex items-center gap-2 py-1"
           style={{ paddingLeft: `${8 + row.depth * 14}px` }}
         >
-          <div className="w-3 h-3 bg-[#21262d] rounded shrink-0" />
-          <div className={`h-3 bg-[#21262d] rounded ${row.width}`} />
+          <div className="w-3 h-3 bg-[var(--bg-tertiary)] rounded shrink-0" />
+          <div className={`h-3 bg-[var(--bg-tertiary)] rounded ${row.width}`} />
         </div>
       ))}
     </div>

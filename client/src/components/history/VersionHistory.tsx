@@ -44,32 +44,32 @@ export default function VersionHistory({ backups = [], onRestored }: VersionHist
   }
 
   return (
-    <div className="bg-[#0d1117] border border-[#30363d] rounded-lg overflow-hidden">
+    <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg overflow-hidden">
       <button
-        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#e6edf3] hover:bg-[#161b22] transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <History size={14} className="text-[#388bfd]" />
+        <History size={14} className="text-[var(--accent-primary)]" />
         <span className="font-medium flex-1 text-left">版本历史</span>
-        <span className="text-xs text-[#6e7681]">{backups.length}</span>
-        {expanded ? <ChevronDown size={14} className="text-[#6e7681]" /> : <ChevronRight size={14} className="text-[#6e7681]" />}
+        <span className="text-xs text-[var(--text-tertiary)]">{backups.length}</span>
+        {expanded ? <ChevronDown size={14} className="text-[var(--text-tertiary)]" /> : <ChevronRight size={14} className="text-[var(--text-tertiary)]" />}
       </button>
 
       {expanded && (
-        <div className="border-t border-[#30363d]">
+        <div className="border-t border-[var(--border-primary)]">
           {backups.length === 0 ? (
-            <div className="px-3 py-4 text-xs text-[#6e7681] text-center">暂无备份记录</div>
+            <div className="px-3 py-4 text-xs text-[var(--text-tertiary)] text-center">暂无备份记录</div>
           ) : (
             backups.map((entry) => (
-              <div key={entry.backupPath} className="flex items-center gap-2 px-3 py-2 border-b border-[#21262d] last:border-0 hover:bg-[#161b22] transition-colors">
+              <div key={entry.backupPath} className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-secondary)] last:border-0 hover:bg-[var(--bg-secondary)] transition-colors">
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-[#e6edf3] truncate">{entry.originalPath.split('/').pop()}</div>
-                  <div className="text-xs text-[#6e7681]">{new Date(entry.timestamp).toLocaleString()}</div>
+                  <div className="text-xs text-[var(--text-primary)] truncate">{entry.originalPath.split('/').pop()}</div>
+                  <div className="text-xs text-[var(--text-tertiary)]">{new Date(entry.timestamp).toLocaleString()}</div>
                 </div>
                 <button
                   onClick={() => handleRestore(entry)}
                   disabled={restoring === entry.backupPath}
-                  className="flex items-center gap-1 text-xs text-[#8b949e] hover:text-[#e6edf3] disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
                   title="恢复此版本"
                 >
                   <RotateCcw size={12} />
@@ -78,7 +78,7 @@ export default function VersionHistory({ backups = [], onRestored }: VersionHist
               </div>
             ))
           )}
-          {status && <div className="px-3 py-2 text-xs text-[#3fb950]">{status}</div>}
+          {status && <div className="px-3 py-2 text-xs text-[var(--success)]">{status}</div>}
         </div>
       )}
     </div>
