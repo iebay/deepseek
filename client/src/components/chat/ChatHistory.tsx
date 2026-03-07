@@ -67,12 +67,12 @@ export default function ChatHistory({ isOpen, onClose }: ChatHistoryProps) {
   return (
     <div
       ref={panelRef}
-      className="absolute top-full left-0 right-0 z-20 mt-0 bg-[#161b22] border border-[#30363d] border-t-0 shadow-xl max-h-72 overflow-y-auto"
+      className="absolute top-full left-0 right-0 z-20 mt-0 bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-t-0 shadow-xl max-h-72 overflow-y-auto"
     >
       {/* New session button */}
       <button
         onClick={handleNewSession}
-        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#388bfd] hover:bg-[#21262d] transition-colors border-b border-[#30363d]"
+        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--accent-primary)] hover:bg-[var(--bg-tertiary)] transition-colors border-b border-[var(--border-primary)]"
       >
         <Plus size={12} />
         新建对话
@@ -80,7 +80,7 @@ export default function ChatHistory({ isOpen, onClose }: ChatHistoryProps) {
 
       {/* Session list */}
       {sortedSessions.length === 0 ? (
-        <div className="px-3 py-4 text-xs text-[#6e7681] text-center">暂无对话记录</div>
+        <div className="px-3 py-4 text-xs text-[var(--text-tertiary)] text-center">暂无对话记录</div>
       ) : (
         sortedSessions.map(session => {
           const isActive = session.id === activeChatSessionId;
@@ -88,19 +88,19 @@ export default function ChatHistory({ isOpen, onClose }: ChatHistoryProps) {
             <div
               key={session.id}
               onClick={() => handleSwitch(session)}
-              className={`group flex items-start justify-between px-3 py-2 cursor-pointer hover:bg-[#21262d] transition-colors ${
-                isActive ? 'bg-[#388bfd]/10 border-l-2 border-[#388bfd]' : 'border-l-2 border-transparent'
+              className={`group flex items-start justify-between px-3 py-2 cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors ${
+                isActive ? 'bg-[var(--accent-bg)] border-l-2 border-[var(--accent-primary)]' : 'border-l-2 border-transparent'
               }`}
             >
               <div className="flex-1 min-w-0 pr-2">
-                <div className="text-xs text-[#e6edf3] truncate">{session.title}</div>
-                <div className="text-[10px] text-[#6e7681] mt-0.5">
+                <div className="text-xs text-[var(--text-primary)] truncate">{session.title}</div>
+                <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
                   {formatSessionTime(session.updatedAt)} · {session.messages.length} 条消息
                 </div>
               </div>
               <button
                 onClick={(e) => handleDelete(e, session.id)}
-                className="shrink-0 p-0.5 rounded text-[#6e7681] opacity-0 group-hover:opacity-100 hover:text-[#f85149] hover:bg-[#f85149]/10 transition-all mt-0.5"
+                className="shrink-0 p-0.5 rounded text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-all mt-0.5"
                 title="删除此对话"
               >
                 <X size={12} />
@@ -119,8 +119,8 @@ export function ChatHistoryButton({ onClick, isOpen }: { onClick: () => void; is
       onClick={onClick}
       className={`p-1.5 rounded-lg transition-colors ${
         isOpen
-          ? 'text-[#388bfd] bg-[#388bfd]/10'
-          : 'text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]'
+          ? 'text-[var(--accent-primary)] bg-[var(--accent-bg)]'
+          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
       }`}
       title="对话历史"
     >

@@ -189,8 +189,8 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
 
   if (!branches) {
     return (
-      <div className="px-3 py-2 border-b border-[#30363d]">
-        <div className="flex items-center gap-2 text-[#8b949e] text-xs">
+      <div className="px-3 py-2 border-b border-[var(--border-primary)]">
+        <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs">
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           <span>加载分支中...</span>
         </div>
@@ -199,33 +199,33 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
   }
 
   return (
-    <div className="border-b border-[#30363d]">
+    <div className="border-b border-[var(--border-primary)]">
       {/* Current branch + actions */}
       <div className="px-3 py-2 flex items-center gap-2">
         {/* Branch switcher dropdown */}
         <div className="relative flex-1 min-w-0" ref={dropdownRef}>
           <button
             onClick={() => setShowDropdown((v) => !v)}
-            className="flex items-center gap-1.5 w-full min-w-0 bg-[#161b22] border border-[#30363d] rounded-lg px-2 py-1 text-xs hover:border-[#388bfd] transition-colors"
+            className="flex items-center gap-1.5 w-full min-w-0 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2 py-1 text-xs hover:border-[var(--accent-primary)] transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#3fb950] shrink-0" />
-            <span className="text-[#e6edf3] truncate flex-1 text-left">{branches.current || '(no branch)'}</span>
-            <ChevronDown size={11} className="text-[#8b949e] shrink-0" />
+            <span className="text-[var(--text-primary)] truncate flex-1 text-left">{branches.current || '(no branch)'}</span>
+            <ChevronDown size={11} className="text-[var(--text-secondary)] shrink-0" />
           </button>
 
           {showDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-full bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
               {branches.local.map((b) => (
                 <button
                   key={b.name}
                   onClick={() => !b.isCurrent && handleCheckout(b.name)}
-                  className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-xs hover:bg-[#21262d] transition-colors ${b.isCurrent ? 'cursor-default' : 'cursor-pointer'}`}
+                  className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-xs hover:bg-[var(--bg-tertiary)] transition-colors ${b.isCurrent ? 'cursor-default' : 'cursor-pointer'}`}
                 >
                   {b.isCurrent
-                    ? <Check size={11} className="text-[#3fb950] shrink-0" />
+                    ? <Check size={11} className="text-[var(--success)] shrink-0" />
                     : <span className="w-2.5 h-2.5 shrink-0" />
                   }
-                  <span className={`truncate ${b.isCurrent ? 'text-[#3fb950]' : 'text-[#e6edf3]'}`}>
+                  <span className={`truncate ${b.isCurrent ? 'text-[var(--success)]' : 'text-[var(--text-primary)]'}`}>
                     {b.name}
                   </span>
                 </button>
@@ -238,7 +238,7 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
         <button
           onClick={handlePull}
           disabled={isPulling}
-          className="p-1.5 rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors disabled:opacity-50"
           title="拉取 (Pull)"
         >
           <ArrowDown size={13} className={isPulling ? 'animate-pulse' : ''} />
@@ -246,14 +246,14 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
         <button
           onClick={handlePush}
           disabled={isPushing}
-          className="p-1.5 rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors disabled:opacity-50"
           title="推送 (Push)"
         >
           <ArrowUp size={13} className={isPushing ? 'animate-pulse' : ''} />
         </button>
         <button
           onClick={openCreateDialog}
-          className="p-1.5 rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+          className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
           title="新建分支"
         >
           <Plus size={13} />
@@ -261,7 +261,7 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
         <button
           onClick={loadBranches}
           disabled={loading}
-          className="p-1.5 rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors disabled:opacity-50"
           title="刷新分支列表"
         >
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -272,7 +272,7 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
       <div>
         <button
           onClick={() => setShowLocal((v) => !v)}
-          className="w-full flex items-center gap-2 px-3 py-1 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22] transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
         >
           <ChevronDown size={11} className={`transition-transform ${showLocal ? '' : '-rotate-90'}`} />
           <GitBranch size={11} />
@@ -298,10 +298,10 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
 
       {/* Remote branches */}
       {branches.remote.length > 0 && (
-        <div className="border-t border-[#30363d]">
+        <div className="border-t border-[var(--border-primary)]">
           <button
             onClick={() => setShowRemote((v) => !v)}
-            className="w-full flex items-center gap-2 px-3 py-1 text-xs text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22] transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
           >
             <ChevronDown size={11} className={`transition-transform ${showRemote ? '' : '-rotate-90'}`} />
             <GitBranch size={11} />
@@ -312,10 +312,10 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
           {showRemote && (
             <ul className="pb-1">
               {branches.remote.map((r) => (
-                <li key={r.name} className="flex items-center gap-2 px-3 py-1 text-xs text-[#8b949e] hover:bg-[#161b22] transition-colors">
+                <li key={r.name} className="flex items-center gap-2 px-3 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#8b949e] shrink-0" />
                   <span className="truncate flex-1">{r.name}</span>
-                  <span className="font-mono text-[10px] text-[#388bfd]">{r.lastCommit}</span>
+                  <span className="font-mono text-[10px] text-[var(--accent-primary)]">{r.lastCommit}</span>
                 </li>
               ))}
             </ul>
@@ -326,9 +326,9 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
       {/* Create Branch Dialog */}
       {showCreateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 w-80 shadow-xl">
-            <h3 className="text-sm font-semibold text-[#e6edf3] mb-3 flex items-center gap-2">
-              <Plus size={14} className="text-[#388bfd]" />
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-4 w-80 shadow-xl">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+              <Plus size={14} className="text-[var(--accent-primary)]" />
               新建分支
             </h3>
             <div className="space-y-2 mb-3">
@@ -337,25 +337,25 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value)}
                 placeholder="分支名称 (如 feature/my-feature)"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg text-xs text-[#e6edf3] placeholder-[#8b949e] px-3 py-2 focus:outline-none focus:border-[#388bfd] transition-colors"
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] px-3 py-2 focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                 autoFocus
               />
               <select
                 value={newBranchBase}
                 onChange={(e) => setNewBranchBase(e.target.value)}
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg text-xs text-[#e6edf3] px-3 py-2 focus:outline-none focus:border-[#388bfd] transition-colors"
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg text-xs text-[var(--text-primary)] px-3 py-2 focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               >
                 {branches.local.map((b) => (
                   <option key={b.name} value={b.name}>{b.name}</option>
                 ))}
               </select>
-              <label className="flex items-center gap-2 text-xs text-[#8b949e] cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={newBranchCheckout}
                   onChange={(e) => setNewBranchCheckout(e.target.checked)}
-                  className="accent-[#388bfd]"
+                  className="accent-[var(--accent-primary)]"
                 />
                 创建后自动切换
               </label>
@@ -363,14 +363,14 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowCreateDialog(false)}
-                className="text-xs text-[#8b949e] hover:text-[#e6edf3] px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition-colors"
+                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleCreate}
                 disabled={isCreating || !newBranchName.trim()}
-                className="text-xs bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs bg-[var(--success-solid)] hover:bg-[var(--success-solid-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 {isCreating ? '创建中...' : '创建'}
               </button>
@@ -382,15 +382,15 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
       {/* Delete Branch Dialog */}
       {showDeleteDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 w-72 shadow-xl">
-            <h3 className="text-sm font-semibold text-[#e6edf3] mb-2 flex items-center gap-2">
-              <Trash2 size={14} className="text-[#f85149]" />
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-4 w-72 shadow-xl">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2 flex items-center gap-2">
+              <Trash2 size={14} className="text-[var(--error)]" />
               删除分支
             </h3>
-            <p className="text-xs text-[#8b949e] mb-3">
-              确定要删除分支 <span className="text-[#e6edf3] font-mono">{showDeleteDialog.name}</span> 吗？
+            <p className="text-xs text-[var(--text-secondary)] mb-3">
+              确定要删除分支 <span className="text-[var(--text-primary)] font-mono">{showDeleteDialog.name}</span> 吗？
             </p>
-            <label className="flex items-center gap-2 text-xs text-[#d29922] cursor-pointer mb-3">
+            <label className="flex items-center gap-2 text-xs text-[var(--warning)] cursor-pointer mb-3">
               <input
                 type="checkbox"
                 checked={forceDelete}
@@ -402,7 +402,7 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => { setShowDeleteDialog(null); setForceDelete(false); }}
-                className="text-xs text-[#8b949e] hover:text-[#e6edf3] px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition-colors"
+                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
               >
                 取消
               </button>
@@ -421,28 +421,28 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
       {/* Merge Branch Dialog */}
       {showMergeDialog && branches && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 w-72 shadow-xl">
-            <h3 className="text-sm font-semibold text-[#e6edf3] mb-2 flex items-center gap-2">
-              <GitMerge size={14} className="text-[#bc8cff]" />
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-4 w-72 shadow-xl">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2 flex items-center gap-2">
+              <GitMerge size={14} className="text-[var(--purple)]" />
               合并分支
             </h3>
-            <p className="text-xs text-[#8b949e] mb-3">
+            <p className="text-xs text-[var(--text-secondary)] mb-3">
               将{' '}
-              <span className="text-[#e6edf3] font-mono">{showMergeDialog.name}</span>
+              <span className="text-[var(--text-primary)] font-mono">{showMergeDialog.name}</span>
               {' '}合并到{' '}
-              <span className="text-[#3fb950] font-mono">{branches.current}</span>？
+              <span className="text-[var(--success)] font-mono">{branches.current}</span>？
             </p>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowMergeDialog(null)}
-                className="text-xs text-[#8b949e] hover:text-[#e6edf3] px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition-colors"
+                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleMerge}
                 disabled={isMerging}
-                className="text-xs bg-[#bc8cff]/80 hover:bg-[#bc8cff] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs bg-[var(--purple)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-all"
               >
                 {isMerging ? '合并中...' : '合并'}
               </button>
@@ -468,7 +468,7 @@ function BranchRow({ branch, currentBranch, onCheckout, onDelete, onMerge }: Bra
 
   return (
     <li
-      className="flex items-center gap-1.5 px-3 py-1 hover:bg-[#161b22] transition-colors group"
+      className="flex items-center gap-1.5 px-3 py-1 hover:bg-[var(--bg-secondary)] transition-colors group"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -478,13 +478,13 @@ function BranchRow({ branch, currentBranch, onCheckout, onDelete, onMerge }: Bra
       }
       <button
         onClick={!isCurrent ? onCheckout : undefined}
-        className={`truncate text-xs flex-1 text-left ${isCurrent ? 'text-[#3fb950] cursor-default' : 'text-[#e6edf3] hover:text-[#58a6ff] cursor-pointer'}`}
+        className={`truncate text-xs flex-1 text-left ${isCurrent ? 'text-[var(--success)] cursor-default' : 'text-[var(--text-primary)] hover:text-[var(--accent-hover)] cursor-pointer'}`}
         title={branch.lastCommitMessage || branch.name}
       >
         {branch.name}
       </button>
       {branch.lastCommit && (
-        <span className="font-mono text-[10px] text-[#8b949e]/50 group-hover:text-[#8b949e] shrink-0 transition-colors">
+        <span className="font-mono text-[10px] text-[var(--text-secondary)]/50 group-hover:text-[var(--text-secondary)] shrink-0 transition-colors">
           {branch.lastCommit}
         </span>
       )}
@@ -492,14 +492,14 @@ function BranchRow({ branch, currentBranch, onCheckout, onDelete, onMerge }: Bra
         <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={onMerge}
-            className="p-1 rounded text-[#8b949e] hover:text-[#bc8cff] hover:bg-[#21262d] transition-colors"
+            className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--purple)] hover:bg-[var(--bg-tertiary)] transition-colors"
             title={`合并到 ${currentBranch}`}
           >
             <GitMerge size={11} />
           </button>
           <button
             onClick={onDelete}
-            className="p-1 rounded text-[#8b949e] hover:text-[#f85149] hover:bg-[#21262d] transition-colors"
+            className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--error)] hover:bg-[var(--bg-tertiary)] transition-colors"
             title="删除分支"
           >
             <Trash2 size={11} />

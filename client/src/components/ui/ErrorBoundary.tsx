@@ -27,9 +27,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return this.props.fallback || (
-        <div className="flex flex-col items-center justify-center h-full bg-[#0d1117] text-[#e6edf3] p-8">
+        <div className="flex flex-col items-center justify-center h-full bg-[var(--bg-primary)] text-[var(--text-primary)] p-8">
           <h2 className="text-lg font-bold mb-2">出错了</h2>
-          <p className="text-sm text-[#8b949e] mb-4">{this.state.error?.message}</p>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">{this.state.error?.message}</p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
             className="px-4 py-2 bg-[#388bfd] text-white rounded-lg text-sm"

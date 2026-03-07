@@ -50,7 +50,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
   return (
     <div
-      className={`w-1 shrink-0 cursor-col-resize hover:bg-[#388bfd]/50 active:bg-[#388bfd] transition-colors ${className}`}
+      className={`w-1 shrink-0 cursor-col-resize hover:bg-[var(--accent-primary)]/50 active:bg-[var(--accent-primary)] transition-colors ${className}`}
       onMouseDown={onMouseDown}
     />
   );
@@ -108,7 +108,7 @@ function EditorLayout() {
   }, [aiPanelWidth, setAIPanelWidth]);
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d1117] text-[#e6edf3]">
+    <div className="flex flex-col h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <OfflineIndicator />
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
@@ -116,7 +116,7 @@ function EditorLayout() {
         {showSidebar && (
           <>
             <aside
-              className="shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200"
+              className="shrink-0 border-r border-[var(--border-primary)] bg-[var(--bg-primary)] overflow-hidden transition-all duration-200"
               style={{ width: sidebarWidth }}
             >
               <ErrorBoundary>
@@ -130,7 +130,7 @@ function EditorLayout() {
         {!showSidebar && showSearchPanel && (
           <>
             <aside
-              className="shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200"
+              className="shrink-0 border-r border-[var(--border-primary)] bg-[var(--bg-primary)] overflow-hidden transition-all duration-200"
               style={{ width: sidebarWidth }}
             >
               <ErrorBoundary>
@@ -152,7 +152,7 @@ function EditorLayout() {
         {showPreview && (
           <>
             <ResizeDivider onResize={(d) => setSidebarWidth(Math.max(160, sidebarWidth + d))} />
-            <div className="w-[38%] shrink-0 border-l border-[#30363d] overflow-hidden">
+            <div className="w-[38%] shrink-0 border-l border-[var(--border-primary)] overflow-hidden">
               {(() => {
                 const activeTab = openTabs.find((t) => t.path === activeTabPath);
                 const isHtml = activeTab?.path?.match(/\.html?$/i);
@@ -171,7 +171,7 @@ function EditorLayout() {
           <>
             <ResizeDivider onResize={handleAIPanelResize} />
             <aside
-              className="shrink-0 border-l border-[#30363d] overflow-hidden transition-all duration-200"
+              className="shrink-0 border-l border-[var(--border-primary)] overflow-hidden transition-all duration-200"
               style={{ width: aiPanelWidth }}
             >
               <ErrorBoundary>
@@ -185,7 +185,7 @@ function EditorLayout() {
           <>
             <ResizeDivider onResize={handleAIPanelResize} />
             <aside
-              className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
+              className="shrink-0 border-l border-[var(--border-primary)] overflow-hidden relative transition-all duration-200"
               style={{ width: aiPanelWidth }}
             >
               <ErrorBoundary>
@@ -200,7 +200,7 @@ function EditorLayout() {
           <>
             <ResizeDivider onResize={handleAIPanelResize} />
             <aside
-              className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
+              className="shrink-0 border-l border-[var(--border-primary)] overflow-hidden relative transition-all duration-200"
               style={{ width: aiPanelWidth }}
             >
               <ErrorBoundary>
@@ -214,7 +214,7 @@ function EditorLayout() {
         {!showAIPanel && (
           <button
             onClick={toggleAIPanel}
-            className="w-6 shrink-0 border-l border-[#30363d] bg-[#161b22] hover:bg-[#21262d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] transition-colors"
+            className="w-6 shrink-0 border-l border-[var(--border-primary)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             title="展开 AI 面板"
           >
             <span className="text-[10px] rotate-90 whitespace-nowrap">AI</span>
@@ -224,7 +224,7 @@ function EditorLayout() {
 
       {/* Bottom: Terminal */}
       {showTerminal && (
-        <div className="h-52 shrink-0 border-t border-[#30363d] overflow-hidden">
+        <div className="h-52 shrink-0 border-t border-[var(--border-primary)] overflow-hidden">
           <ErrorBoundary>
             <Terminal />
           </ErrorBoundary>
