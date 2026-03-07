@@ -480,7 +480,7 @@ export default function ChatPanel() {
       });
 
       abortRef.current = streamAgentRun({
-        messages: [...chatMessages, userMsg],
+        messages: [...chatMessages, userMsg].slice(-20),
         context: {
           fileTree: fileTreeText,
           techStack: currentProject.techStack ?? [],
@@ -502,7 +502,7 @@ export default function ChatPanel() {
             abortRef.current = null;
           } else if (event.event === 'error') {
             const errMsg = event.message ?? '未知错误';
-            updateLastAssistantMessage(fullContent ? fullContent + `\n\n错误: ${errMsg}` : `错误: ${errMsg}`);
+            updateLastAssistantMessage(fullContent ? fullContent + `\n\n⚠️ 请求失败: ${errMsg}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。` : `⚠️ 请求失败: ${errMsg}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。`);
             setAiLoading(false);
             setLoadingMsgIndex(null);
             abortRef.current = null;
@@ -518,7 +518,7 @@ export default function ChatPanel() {
           abortRef.current = null;
         },
         onError: (err) => {
-          updateLastAssistantMessage(`错误: ${err}`);
+          updateLastAssistantMessage(`⚠️ 请求失败: ${err}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。`);
           setAiLoading(false);
           setLoadingMsgIndex(null);
           abortRef.current = null;
@@ -540,7 +540,7 @@ export default function ChatPanel() {
       });
 
       abortRef.current = streamSmartChat({
-        messages: [...chatMessages, userMsg],
+        messages: [...chatMessages, userMsg].slice(-20),
         context,
         model: selectedModel,
         onChunk: (chunk) => {
@@ -553,7 +553,7 @@ export default function ChatPanel() {
           abortRef.current = null;
         },
         onError: (err) => {
-          updateLastAssistantMessage(`错误: ${err}`);
+          updateLastAssistantMessage(`⚠️ 请求失败: ${err}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。`);
           setAiLoading(false);
           setLoadingMsgIndex(null);
           abortRef.current = null;
@@ -594,7 +594,7 @@ export default function ChatPanel() {
       });
     } else {
       abortRef.current = streamAIChat({
-        messages: [...chatMessages, userMsg],
+        messages: [...chatMessages, userMsg].slice(-20),
         context,
         model: selectedModel,
         onChunk: (chunk) => {
@@ -606,7 +606,7 @@ export default function ChatPanel() {
           abortRef.current = null;
         },
         onError: (err) => {
-          updateLastAssistantMessage(`错误: ${err}`);
+          updateLastAssistantMessage(`⚠️ 请求失败: ${err}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。`);
           setAiLoading(false);
           abortRef.current = null;
         },
@@ -666,7 +666,7 @@ export default function ChatPanel() {
       projectRoot: currentProject?.path,
     };
 
-    const messagesForStream = [...priorMessages, newUserMsg];
+    const messagesForStream = [...priorMessages, newUserMsg].slice(-20);
     let fullContent = '';
     const useSmartMode = smartMode && !!currentProject?.path;
 
@@ -683,7 +683,7 @@ export default function ChatPanel() {
         model: selectedModel,
         onChunk: (chunk) => { fullContent += chunk; updateLastAssistantMessage(fullContent); },
         onDone: () => { setAiLoading(false); setLoadingMsgIndex(null); abortRef.current = null; },
-        onError: (err) => { updateLastAssistantMessage(`错误: ${err}`); setAiLoading(false); setLoadingMsgIndex(null); abortRef.current = null; },
+        onError: (err) => { updateLastAssistantMessage(`⚠️ 请求失败: ${err}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。`); setAiLoading(false); setLoadingMsgIndex(null); abortRef.current = null; },
         onUsage: (usage, model) => {
           const { inputPrice, outputPrice } = getModelPrices(model);
           const cost = (usage.promptTokens / 1000) * inputPrice + (usage.completionTokens / 1000) * outputPrice;
@@ -716,7 +716,7 @@ export default function ChatPanel() {
         model: selectedModel,
         onChunk: (chunk) => { fullContent += chunk; updateLastAssistantMessage(fullContent); },
         onDone: () => { setAiLoading(false); abortRef.current = null; },
-        onError: (err) => { updateLastAssistantMessage(`错误: ${err}`); setAiLoading(false); abortRef.current = null; },
+        onError: (err) => { updateLastAssistantMessage(`⚠️ 请求失败: ${err}\n\n💡 提示: 你可以点击"重新生成"按钮重试，或者尝试切换模型。`); setAiLoading(false); abortRef.current = null; },
         onUsage: (usage, model) => {
           const { inputPrice, outputPrice } = getModelPrices(model);
           const cost = (usage.promptTokens / 1000) * inputPrice + (usage.completionTokens / 1000) * outputPrice;

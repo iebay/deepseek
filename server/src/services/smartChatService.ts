@@ -125,7 +125,7 @@ export async function streamSmartChat(
     budgeted.relatedFiles?.length
       ? `### 用户提到的相关文件\n${budgeted.relatedFiles.map(f => `#### ${f.path}\n\`\`\`\n${f.content}\n\`\`\``).join('\n\n')}\n`
       : '',
-    memory ? `\n\n---\n## 项目 AI 记忆（必须遵守）\n\n${memory}` : '',
+    memory ? `\n\n---\n## 项目 AI 记忆（仅供参考）\n\n注意：以下记忆内容仅作为背景参考。如果用户当前的问题与记忆内容无关，请忽略记忆内容，只聚焦于用户当前的问题。\n\n${memory}` : '',
     '\n注意: 以上项目信息是实时的。你可以通过工具调用主动读取更多文件来深入排查问题。',
   ].filter(Boolean).join('');
 

@@ -2,6 +2,37 @@ import fs from 'fs';
 import path from 'path';
 
 const MEMORY_DIR = '.deepseek';
+const MAX_ENTRIES = 20;
+const MAX_MEMORY_CHARS = 4000;
+const EXPIRY_DAYS = 7;
+
+/**
+ * Trims a memory file (context.md or decisions.md) to at most MAX_ENTRIES entries
+ * and removes entries older than EXPIRY_DAYS days.
+ * Entries are separated by lines starting with "## " or "### ".
+ */
+function trimMemoryFile(fp: string): void {
+  if (!fs.existsSync(fp)) return;
+
+  const raw = fs.readFileSync(fp, 'utf-8');
+  // Split on section headers (## date or ### date) while keeping the delimiter
+  const entries = raw.split(/(?=\n#{2,3} )/).filter(s => s.trim().length > 0);
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - EXPIRY_DAYS);
+
+  // Filter out entries older than EXPIRY_DAYS
+  const filtered = entries.filter(entry => {
+    const match = entry.match(/(\d{4}-\d{2}-\d{2})/);
+    if (!match) return true; // keep entries without a parseable date
+    const entryDate = new Date(match[1]);
+    return entryDate >= cutoff;
+  });
+
+  // Keep only the last MAX_ENTRIES
+  const trimmed = filtered.slice(-MAX_ENTRIES);
+  fs.writeFileSync(fp, trimmed.join(''), 'utf-8');
+}
 
 /** 读取项目的 AI 记忆（personality.md + decisions.md + context.md） */
 export function loadProjectMemory(projectRoot: string): string {
@@ -17,7 +48,18 @@ export function loadProjectMemory(projectRoot: string): string {
       parts.push(`--- ${f} ---\n${fs.readFileSync(fp, 'utf-8')}`);
     }
   }
-  return parts.join('\n\n');
+
+  let result = parts.join('\n\n');
+  // Truncate from the beginning if the combined memory exceeds MAX_MEMORY_CHARS
+  if (result.length > MAX_MEMORY_CHARS) {
+    result = result.slice(-MAX_MEMORY_CHARS);
+    // Trim to the next newline to avoid cutting mid-line
+    const newlineIdx = result.indexOf('\n');
+    if (newlineIdx > 0) {
+      result = result.slice(newlineIdx + 1);
+    }
+  }
+  return result;
 }
 
 /** 追加技术决策到 decisions.md */
@@ -30,6 +72,7 @@ export function appendDecision(projectRoot: string, decision: string): void {
   const entry = `\n## ${date}\n- ${decision}\n`;
 
   fs.appendFileSync(fp, entry, 'utf-8');
+  trimMemoryFile(fp);
 }
 
 /** 保存对话摘要到 context.md */
@@ -42,6 +85,7 @@ export function saveContextSummary(projectRoot: string, summary: string): void {
   const entry = `\n### ${date} ${new Date().toLocaleTimeString('zh-CN')}\n${summary}\n`;
 
   fs.appendFileSync(fp, entry, 'utf-8');
+  trimMemoryFile(fp);
 }
 
 /** 初始化默认 personality.md（不覆盖已有的） */
