@@ -8,6 +8,8 @@ import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
 import ImageUpload, { type UploadedImage } from './ImageUpload';
 import ChatHistory, { ChatHistoryButton } from './ChatHistory';
+import { recordTokenUsage } from '../../api/statsApi';
+import { formatCost, formatTokens } from '../../utils/formatStats';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -270,6 +272,14 @@ function findFileInTree(node: FileNode | null, fileName: string): string | null 
   return null;
 }
 
+// Client-side price estimates for immediate UI display only.
+// The server does the authoritative cost calculation when recording usage.
+function getModelPrices(model: string): { inputPrice: number; outputPrice: number } {
+  // Default prices per 1K tokens (USD) — must match DEEPSEEK_CHAT_INPUT/OUTPUT_PRICE defaults
+  if (model === 'deepseek-reasoner') return { inputPrice: 0.00055, outputPrice: 0.00219 };
+  return { inputPrice: 0.00014, outputPrice: 0.00028 };
+}
+
 export default function ChatPanel() {
   const {
     chatMessages, addChatMessage, updateLastAssistantMessage,
@@ -284,6 +294,7 @@ export default function ChatPanel() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
+  const [lastUsage, setLastUsage] = useState<{ tokens: number; cost: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
@@ -408,6 +419,17 @@ export default function ChatPanel() {
         updateLastAssistantMessage(`错误: ${err}`);
         setAiLoading(false);
         abortRef.current = null;
+      },
+      onUsage: (usage, model) => {
+        const { inputPrice, outputPrice } = getModelPrices(model);
+        const cost = (usage.prompt_tokens / 1000) * inputPrice + (usage.completion_tokens / 1000) * outputPrice;
+        setLastUsage({ tokens: usage.total_tokens, cost });
+        recordTokenUsage({
+          model,
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+          totalTokens: usage.total_tokens,
+        }).catch(() => { /* ignore */ });
       },
     });
   }
@@ -631,7 +653,14 @@ export default function ChatPanel() {
             <Send size={15} />
           </button>
         </div>
-        <p className="text-[10px] text-[#6e7681] mt-1.5">Enter 发送 · Shift+Enter 换行</p>
+        <p className="text-[10px] text-[#6e7681] mt-1.5">
+          Enter 发送 · Shift+Enter 换行
+          {lastUsage && (
+            <span className="ml-2 text-[#8b949e]">
+              · 上次: {formatTokens(lastUsage.tokens)} tokens · {formatCost(lastUsage.cost)}
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Clear confirm dialog */}

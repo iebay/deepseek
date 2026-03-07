@@ -84,6 +84,7 @@ interface AppState {
   showSearchPanel: boolean;
   showProjectList: boolean;
   showNpmPanel: boolean;
+  showStatsPanel: boolean;
   aiMode: 'chat' | 'agent';
   sidebarWidth: number;
   aiPanelWidth: number;
@@ -117,6 +118,7 @@ interface AppState {
   toggleSearchPanel: () => void;
   setShowProjectList: (show: boolean) => void;
   toggleNpmPanel: () => void;
+  toggleStatsPanel: () => void;
   setAiMode: (mode: 'chat' | 'agent') => void;
   activateAgentMode: () => void;
   setSidebarWidth: (width: number) => void;
@@ -157,6 +159,7 @@ export const useAppStore = create<AppState>()(
           showSearchPanel: false,
           showProjectList: false,
           showNpmPanel: false,
+          showStatsPanel: false,
           aiMode: 'chat' as const,
           sidebarWidth: 240,
           aiPanelWidth: 320,
@@ -227,6 +230,7 @@ export const useAppStore = create<AppState>()(
           toggleSearchPanel: () => set((state) => ({ showSearchPanel: !state.showSearchPanel })),
           setShowProjectList: (show) => set({ showProjectList: show }),
           toggleNpmPanel: () => set((state) => ({ showNpmPanel: !state.showNpmPanel })),
+          toggleStatsPanel: () => set((state) => ({ showStatsPanel: !state.showStatsPanel })),
           setAiMode: (mode) => set({ aiMode: mode }),
           activateAgentMode: () => set({ aiMode: 'agent', showAIPanel: true }),
           setSidebarWidth: (width) => set({ sidebarWidth: width }),
