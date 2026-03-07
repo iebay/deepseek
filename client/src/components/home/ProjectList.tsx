@@ -281,11 +281,18 @@ export default function ProjectList() {
           </div>
         ) : error ? (
           <div className="flex items-center gap-2 text-sm text-[var(--error)] bg-[var(--error-bg)] rounded-xl px-4 py-3 mb-6">
-            <AlertCircle size={14} />
-            {error}
+            <AlertCircle size={14} className="shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div>{error}</div>
+              {(error.includes('连接') || error.includes('404') || error.includes('Not Found')) && (
+                <div className="text-xs mt-1 opacity-75">
+                  请确认后端服务器已启动：cd server && npm run dev
+                </div>
+              )}
+            </div>
             <button
               onClick={loadProjects}
-              className="ml-auto text-xs underline hover:no-underline"
+              className="ml-auto text-xs underline hover:no-underline shrink-0"
             >
               重试
             </button>
