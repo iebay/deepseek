@@ -1,33 +1,84 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Send, Bot, User, Trash2, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, Trash2, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, Wrench } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat, streamSmartChat } from '../../api/aiApi';
+import { streamAgentRun, type AgentEvent } from '../../api/agentApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
 import type { ChatMessage, MultimodalContentPart, FileNode } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import ImageUpload, { type UploadedImage } from './ImageUpload';
 import ChatHistory, { ChatHistoryButton } from './ChatHistory';
 import ToolTrace, { type ToolAction } from './ToolTrace';
+import SummaryTable from './SummaryTable';
 import { recordTokenUsage } from '../../api/statsApi';
 import { formatCost, formatTokens } from '../../utils/formatStats';
 import { MODELS } from '../../constants/models';
 import TypingDots from './TypingDots';
 import { renderContent } from './renderContent';
 import { formatTime, exportChatAsMarkdown } from './chatUtils';
+import { parseFileChanges } from '../../utils/parseAIResponse';
 
-interface ParsedAIResponse {
-  files?: { path: string; content: string }[];
-  explanation?: string;
+function agentEventIcon(type: AgentEvent['event']): string {
+  switch (type) {
+    case 'thinking': return '🧠';
+    case 'tool_call': return '🔧';
+    case 'tool_result': return '📄';
+    case 'content': return '💬';
+    case 'done': return '✅';
+    case 'error': return '❌';
+    default: return '•';
+  }
 }
 
-function tryParseFileChanges(text: string): ParsedAIResponse | null {
-  const match = text.match(/```json\s*([\s\S]*?)```/);
-  if (!match) return null;
-  try {
-    return JSON.parse(match[1]) as ParsedAIResponse;
-  } catch {
-    return null;
-  }
+function AgentEventTrace({ events, isLoading }: { events: AgentEvent[]; isLoading?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (events.length === 0 && !isLoading) return null;
+
+  const thinkingAndTools = events.filter(e => e.event !== 'content' && e.event !== 'done' && e.event !== 'error');
+  const label = isLoading && events.length === 0
+    ? 'Agent 正在思考...'
+    : `Agent 执行了 ${thinkingAndTools.length} 个步骤`;
+
+  return (
+    <div className="mb-2 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-tertiary)] text-xs overflow-hidden">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--bg-hover)] transition-colors text-left"
+      >
+        <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+          <Cpu size={11} />
+          <span>{label}</span>
+          {isLoading && (
+            <span className="flex gap-0.5 ml-1">
+              <span className="w-1 h-1 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1 h-1 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1 h-1 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </span>
+          )}
+        </div>
+        {thinkingAndTools.length > 0 && (
+          expanded
+            ? <RefreshCw size={11} className="text-[var(--text-tertiary)] shrink-0" />
+            : <Wrench size={11} className="text-[var(--text-tertiary)] shrink-0" />
+        )}
+      </button>
+      {expanded && thinkingAndTools.length > 0 && (
+        <div className="border-t border-[var(--border-primary)] px-2.5 py-1.5 space-y-1">
+          {thinkingAndTools.map((ev, i) => (
+            <div key={i} className="flex items-start gap-1.5 text-[var(--text-secondary)]">
+              <span className="shrink-0 mt-0.5">{agentEventIcon(ev.event)}</span>
+              <span className="break-all">
+                {ev.event === 'thinking' && ev.message}
+                {ev.event === 'tool_call' && ('调用 ' + (ev.tool ?? '') + (ev.args ? ': ' + JSON.stringify(ev.args).slice(0, 80) : ''))}
+                {ev.event === 'tool_result' && ((ev.tool ?? '') + ' 执行完成')}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function MessageBubble({
@@ -37,6 +88,8 @@ function MessageBubble({
   appliedFiles,
   toolActions,
   isToolLoading,
+  agentEvents,
+  isAgentLoading,
   onRegenerate,
   onOpenFile,
   knownFilePaths,
@@ -47,6 +100,8 @@ function MessageBubble({
   appliedFiles?: Set<string>;
   toolActions?: ToolAction[];
   isToolLoading?: boolean;
+  agentEvents?: AgentEvent[];
+  isAgentLoading?: boolean;
   onRegenerate?: () => void;
   onOpenFile?: (path: string) => void;
   knownFilePaths?: Set<string>;
@@ -79,6 +134,7 @@ function MessageBubble({
   }
 
   const textContent = typeof msg.content === 'string' ? msg.content : (msg.content.find(p => p.type === 'text')?.text ?? '');
+  const parsedFiles = !isUser && textContent ? parseFileChanges(textContent) : null;
 
   return (
     <div className={`flex gap-2.5 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -86,6 +142,9 @@ function MessageBubble({
         {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
       <div className={`max-w-[85%] min-w-0 ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+        {!isUser && (agentEvents || isAgentLoading) && (
+          <AgentEventTrace events={agentEvents ?? []} isLoading={isAgentLoading} />
+        )}
         {!isUser && (toolActions || isToolLoading) && (
           <ToolTrace actions={toolActions ?? []} isLoading={isToolLoading} />
         )}
@@ -98,6 +157,9 @@ function MessageBubble({
             </div>
           )}
         </div>
+        {!isUser && parsedFiles && parsedFiles.files.length > 0 && appliedFiles && (
+          <SummaryTable files={parsedFiles.files} appliedFiles={appliedFiles} />
+        )}
         {msg.timestamp && (
           <span className="text-[10px] text-[var(--text-tertiary)] px-1">{formatTime(msg.timestamp)}</span>
         )}
@@ -205,15 +267,17 @@ export default function ChatPanel() {
 
   const [input, setInput] = useState('');
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [elapsed, setElapsed] = useState<number>(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
   const [lastUsage, setLastUsage] = useState<{ tokens: number; cost: number } | null>(null);
-  // Map from message index → tool actions for that assistant message
-  // TODO: Consider useReducer for messageToolActions to avoid frequent Map copies on each tool call
+  // Map from message index → tool actions for that assistant message (smart chat)
   const [messageToolActions, setMessageToolActions] = useState<Map<number, ToolAction[]>>(new Map());
-  // Index of the currently-loading assistant message (for live tool trace)
+  // Map from message index → agent events for that assistant message (agent mode)
+  const [messageAgentEvents, setMessageAgentEvents] = useState<Map<number, AgentEvent[]>>(new Map());
+  // Index of the currently-loading assistant message (for live tool/agent trace)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -289,6 +353,59 @@ export default function ChatPanel() {
     }
   }, [openTabs, openTab, setActiveTab]);
 
+  const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+  const MAX_IMAGES = 5;
+
+  async function addImageFiles(files: File[]) {
+    const imageFiles = files.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));
+    if (imageFiles.length === 0) return;
+    const remaining = MAX_IMAGES - images.length;
+    const toAdd = imageFiles.slice(0, remaining);
+    const newImages: UploadedImage[] = await Promise.all(
+      toAdd.map(async (file) => {
+        const url = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        return { url, name: file.name };
+      })
+    );
+    setImages(prev => [...prev, ...newImages]);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    // Only clear if leaving the container itself (relatedTarget may be null when leaving window)
+    if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    void addImageFiles(files);
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter(item => ALLOWED_IMAGE_TYPES.includes(item.type));
+    if (imageItems.length === 0) return;
+    e.preventDefault();
+    const files = imageItems.map(item => item.getAsFile()).filter((f): f is File => f !== null);
+    void addImageFiles(files);
+  }
+
+
   async function handleSend(text?: string) {
     const msgText = (text ?? input).trim();
     if ((!msgText && images.length === 0) || isAiLoading) return;
@@ -352,6 +469,63 @@ export default function ChatPanel() {
     };
 
     let fullContent = '';
+
+    // Agent mode: use streamAgentRun
+    if (aiMode === 'agent' && currentProject?.path) {
+      setLoadingMsgIndex(assistantMsgIndex);
+      setMessageAgentEvents(prev => {
+        const next = new Map(prev);
+        next.set(assistantMsgIndex, []);
+        return next;
+      });
+
+      abortRef.current = streamAgentRun({
+        messages: [...chatMessages, userMsg],
+        context: {
+          fileTree: fileTreeText,
+          techStack: currentProject.techStack ?? [],
+          currentFile: activeTab?.path,
+          currentFileContent: activeTab?.content,
+          projectRoot: currentProject.path,
+        },
+        model: selectedModel,
+        onEvent: (event) => {
+          setMessageAgentEvents(prev => {
+            const next = new Map(prev);
+            const existing = next.get(assistantMsgIndex) ?? [];
+            next.set(assistantMsgIndex, [...existing, event]);
+            return next;
+          });
+          if (event.event === 'done') {
+            setAiLoading(false);
+            setLoadingMsgIndex(null);
+            abortRef.current = null;
+          } else if (event.event === 'error') {
+            const errMsg = event.message ?? '未知错误';
+            updateLastAssistantMessage(fullContent ? fullContent + `\n\n错误: ${errMsg}` : `错误: ${errMsg}`);
+            setAiLoading(false);
+            setLoadingMsgIndex(null);
+            abortRef.current = null;
+          }
+        },
+        onContent: (chunk) => {
+          fullContent += chunk;
+          updateLastAssistantMessage(fullContent);
+        },
+        onDone: () => {
+          setAiLoading(false);
+          setLoadingMsgIndex(null);
+          abortRef.current = null;
+        },
+        onError: (err) => {
+          updateLastAssistantMessage(`错误: ${err}`);
+          setAiLoading(false);
+          setLoadingMsgIndex(null);
+          abortRef.current = null;
+        },
+      });
+      return;
+    }
 
     // Use smart mode when enabled and projectRoot is available
     const useSmartMode = smartMode && !!currentProject?.path;
@@ -594,7 +768,7 @@ export default function ChatPanel() {
     }
     const lastMsg = chatMessages[chatMessages.length - 1];
     const lastContent = typeof lastMsg?.content === 'string' ? lastMsg.content : '';
-    const parsed = lastContent ? tryParseFileChanges(lastContent) : null;
+    const parsed = lastContent ? parseFileChanges(lastContent) : null;
     if (!parsed?.files?.length) {
       showToast('未找到可应用的文件修改', 'error');
       return;
@@ -737,7 +911,9 @@ export default function ChatPanel() {
                 onApplyAll={handleApplyAll}
                 appliedFiles={appliedFiles}
                 toolActions={messageToolActions.get(i)}
-                isToolLoading={loadingMsgIndex === i && isAiLoading}
+                isToolLoading={loadingMsgIndex === i && isAiLoading && !messageAgentEvents.has(i)}
+                agentEvents={messageAgentEvents.get(i)}
+                isAgentLoading={loadingMsgIndex === i && isAiLoading && messageAgentEvents.has(i)}
                 onRegenerate={msg.role === 'assistant' && i > 0 ? () => handleRegenerate(i) : undefined}
                 onOpenFile={handleOpenFile}
                 knownFilePaths={knownFilePaths}
@@ -760,7 +936,17 @@ export default function ChatPanel() {
 
       {/* Input */}
       <div className="px-3 py-2 shrink-0">
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl focus-within:border-[var(--accent-primary)] transition-colors">
+        <div
+          className={`bg-[var(--bg-secondary)] border rounded-2xl focus-within:border-[var(--accent-primary)] transition-colors relative ${isDragging ? 'border-[var(--accent-primary)] border-2' : 'border-[var(--border-primary)]'}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isDragging && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-[var(--accent-primary)]/10 pointer-events-none">
+              <span className="text-xs text-[var(--accent-primary)] font-medium">释放以添加图片</span>
+            </div>
+          )}
           {images.length > 0 && (
             <div className="px-3 pt-2">
               <ImageUpload images={images} onChange={setImages} />
@@ -770,7 +956,7 @@ export default function ChatPanel() {
             ref={textareaRef}
             className="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] px-3 py-2.5 resize-none focus:outline-none min-h-[40px] max-h-[120px]"
             style={{ height: '40px' }}
-            placeholder="描述你的需求..."
+            placeholder={aiMode === 'agent' ? '描述任务，Agent 将自动执行...' : '描述你的需求...'}
             title="Enter 发送 · Shift+Enter 换行"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -780,6 +966,7 @@ export default function ChatPanel() {
                 handleSend();
               }
             }}
+            onPaste={handlePaste}
             disabled={isAiLoading}
           />
           <div className="flex items-center justify-between px-2 pb-2">
