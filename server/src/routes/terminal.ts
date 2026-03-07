@@ -1,5 +1,7 @@
 import { IncomingMessage } from 'http';
+import fs from 'fs';
 import WebSocket from 'ws';
+import { isPathSafe, getAllowedRoots } from '../utils/pathUtils';
 
 export async function handleTerminalUpgrade(wss: WebSocket.Server, ws: WebSocket, req: IncomingMessage): Promise<void> {
   let ptyProcess: { write: (data: string) => void; resize: (cols: number, rows: number) => void; kill: () => void } | null = null;
@@ -15,6 +17,24 @@ export async function handleTerminalUpgrade(wss: WebSocket.Server, ws: WebSocket
 
     const shell = process.platform === 'win32' ? 'powershell.exe' : (process.env.SHELL || 'bash');
     const cwd = req.url ? new URL(req.url, 'http://localhost').searchParams.get('cwd') || process.env.HOME || '/' : process.env.HOME || '/';
+
+    if (!isPathSafe(cwd, getAllowedRoots())) {
+      ws.send(JSON.stringify({ type: 'error', message: 'Access denied: path is outside allowed roots' }));
+      ws.close();
+      return;
+    }
+
+    try {
+      if (!fs.statSync(cwd).isDirectory()) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Invalid working directory: path does not exist or is not a directory' }));
+        ws.close();
+        return;
+      }
+    } catch {
+      ws.send(JSON.stringify({ type: 'error', message: 'Invalid working directory: path does not exist or is not a directory' }));
+      ws.close();
+      return;
+    }
 
     const proc = pty.spawn(shell, [], {
       name: 'xterm-color',
