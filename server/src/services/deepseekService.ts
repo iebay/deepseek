@@ -79,7 +79,9 @@ ${FILE_MODIFICATION_FORMAT}
 **注意**：
 - JSON 代码块必须使用 \`\`\`json 围栏格式
 - 修改多个文件时，explanation 中必须列出所有文件名及修改要点
-- 如果是简单的问答，不涉及文件修改，可以直接回答，无需使用上述模板`;
+- 如果是简单的问答、解释概念、回答问题，直接用自然语言回答即可，不需要使用上述模板
+- 只有当用户明确要求修改、创建或重构代码时，才使用上述模板
+- 不要为了使用模板而强行将简单问题复杂化`;
 
 
 export async function streamChat(
@@ -109,7 +111,7 @@ export async function streamChat(
       : '',
     context.projectRoot ? (() => {
       const memory = loadProjectMemory(context.projectRoot);
-      return memory ? `\n\n---\n## 项目 AI 记忆（必须遵守）\n\n${memory}` : '';
+      return memory ? `\n\n---\n## 项目 AI 记忆（仅供参考）\n\n注意：以下记忆内容仅作为背景参考。如果用户当前的问题与记忆内容无关，请忽略记忆内容，只聚焦于用户当前的问题。\n\n${memory}` : '';
     })() : '',
     '\n注意: 以上项目信息是实时的。你可以基于这些信息分析和修改用户的代码。',
   ].filter(Boolean).join('');

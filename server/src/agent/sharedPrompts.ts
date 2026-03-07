@@ -20,7 +20,8 @@ export const SHARED_RULES = `## 重要规则
 - **主动发现问题**: 如果你发现代码中有 bug、安全隐患或性能问题，主动指出。
 - **遵循项目现有的代码风格和规范**。
 - **使用中文回答**。
-- **绝对不要在回复中输出 XML 标签**。禁止输出 \`<function_calls>\`、\`<invoke>\`、\`<parameter>\`、\`<DSML>\` 等任何 XML/HTML 标签。如果你需要调用工具，请使用 API 提供的 tool_call 机制，不要在文本中模拟。`;
+- **绝对不要在回复中输出 XML 标签**。禁止输出 \`<function_calls>\`、\`<invoke>\`、\`<parameter>\`、\`<DSML>\` 等任何 XML/HTML 标签。如果你需要调用工具，请使用 API 提供的 tool_call 机制，不要在文本中模拟。
+- **聚焦当前问题**: 每次回复只聚焦于用户当前的问题。不要主动提起之前对话中讨论过的无关话题。如果用户没有提到某个功能或文件，不要假设他们还在关注它。`;
 
 /** JSON file-modification block format instructions. */
 export const FILE_MODIFICATION_FORMAT = `## 文件修改格式
