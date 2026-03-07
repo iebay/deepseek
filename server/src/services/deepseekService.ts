@@ -10,7 +10,7 @@ import { SHARED_CAPABILITIES, SHARED_RULES, FILE_MODIFICATION_FORMAT } from '../
 export interface MultimodalContentPart {
   type: 'text' | 'image_url';
   text?: string;
-  image_url?: { url: string };
+  image_url?: { url: string };  
 }
 
 export interface ChatMessage {
@@ -81,23 +81,23 @@ export async function streamChat(
     SYSTEM_PROMPT,
     '\n\n---\n\n## 当前项目上下文\n',
     budgeted.fileTree ? `### 项目文件树\n\`
-    + `\n${budgeted.fileTree}\n\`
-    + `\n` : '',
+    `\n${budgeted.fileTree}\n\`
+    `\n` : '',
     context.techStack?.length ? `### 技术栈\n${context.techStack.join(', ')}\n` : '',
     context.currentFile ? `### 当前打开的文件\n路径: \`${context.currentFile}\`\n` : '',
     budgeted.currentFileContent ? `### 当前文件内容\n\`
-    + `\n${budgeted.currentFileContent}\n\`
-    + `\n` : `### 提示\n如果没有提供当前文件内容，说明用户还没有打开任何文件。你仍然可以基于文件树分析项目结构，并建议用户打开相关文件或切换到 Agent 模式来进行多文件操作。\n`,
+    `\n${budgeted.currentFileContent}\n\`
+    `\n` : `### 提示\n如果没有提供当前文件内容，说明用户还没有打开任何文件。你仍然可以基于文件树分析项目结构，并建议用户打开相关文件或切换到 Agent 模式来进行多文件操作。\n`,
     budgeted.relatedFiles?.length
       ? `### 用户提到的相关文件\n${budgeted.relatedFiles.map(f => `#### ${f.path}\n\`
-      + `\n${f.content}\n\`
-      + `\n`).join('\n\n')}\n`
+      `\n${f.content}\n\`
+      `\n`).join('\n\n')}\n`
       : '',
     context.projectRoot ? (() => {
       const memory = loadProjectMemory(context.projectRoot);
       return memory ? `\n\n---\n## 项目 AI 记忆（仅供参考）\n\n注意：以下记忆内容仅作为背景参考。如果用户当前的问题与记忆内容无关，请忽略记忆内容，只聚焦于用户当前的问题。\n\n${memory}` : '';
     })() : '',
-    '\n注意: 以上项目信息是实时的。你可以基于这些信息分析和修改用户的代码。',
+    '\n注意: 以上项目信息是实时的。你可以基于这些信息分析和修改用户的代���。',
   ].filter(Boolean).join('');
 
   const allMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
