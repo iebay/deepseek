@@ -82,6 +82,14 @@ function detectTechStack(dirPath: string): string[] {
 router.get('/list', (_req: Request, res: Response) => {
   try {
     const allowedRoots = getAllowedRoots();
+
+    if (allowedRoots.length === 0) {
+      return res.json({
+        projects: [],
+        warning: 'No allowed root paths configured. Set ALLOWED_ROOT_PATHS in .env',
+      });
+    }
+
     const metadata = readMetadata();
     const projectMap = new Map<string, {
       name: string;
