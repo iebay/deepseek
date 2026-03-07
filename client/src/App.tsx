@@ -49,7 +49,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 
   return (
     <div
-      className={`w-1 shrink-0 cursor-col-resize hover:bg-[var(--accent-bg)]0 active:bg-[var(--accent-primary)] transition-colors ${className}`}
+      className={`w-1 shrink-0 cursor-col-resize hover:bg-[var(--accent-bg)] active:bg-[var(--accent-primary)] transition-colors ${className}`}
       onMouseDown={onMouseDown}
     />
   );
