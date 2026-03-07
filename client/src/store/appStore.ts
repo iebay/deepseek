@@ -64,6 +64,7 @@ interface AppState {
   showGitPanel: boolean;
   showTerminal: boolean;
   showSearchPanel: boolean;
+  showProjectList: boolean;
   aiMode: 'chat' | 'agent';
   sidebarWidth: number;
   aiPanelWidth: number;
@@ -90,6 +91,7 @@ interface AppState {
   toggleGitPanel: () => void;
   toggleTerminal: () => void;
   toggleSearchPanel: () => void;
+  setShowProjectList: (show: boolean) => void;
   setAiMode: (mode: 'chat' | 'agent') => void;
   activateAgentMode: () => void;
   setSidebarWidth: (width: number) => void;
@@ -123,6 +125,7 @@ export const useAppStore = create<AppState>()(
           showGitPanel: false,
           showTerminal: false,
           showSearchPanel: false,
+          showProjectList: false,
           aiMode: 'chat' as const,
           sidebarWidth: 240,
           aiPanelWidth: 320,
@@ -186,6 +189,7 @@ export const useAppStore = create<AppState>()(
           toggleGitPanel: () => set((state) => ({ showGitPanel: !state.showGitPanel })),
           toggleTerminal: () => set((state) => ({ showTerminal: !state.showTerminal })),
           toggleSearchPanel: () => set((state) => ({ showSearchPanel: !state.showSearchPanel })),
+          setShowProjectList: (show) => set({ showProjectList: show }),
           setAiMode: (mode) => set({ aiMode: mode }),
           activateAgentMode: () => set({ aiMode: 'agent', showAIPanel: true }),
           setSidebarWidth: (width) => set({ sidebarWidth: width }),

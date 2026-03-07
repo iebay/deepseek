@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProjectSelector from './components/home/ProjectSelector';
+import ProjectList from './components/home/ProjectList';
 import TopBar from './components/layout/TopBar';
 import FileTree from './components/fileTree/FileTree';
 import SearchPanel from './components/search/SearchPanel';
@@ -222,7 +223,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Routes>
-        <Route path="/" element={<ProjectSelector />} />
+        <Route path="/" element={<ProjectList />} />
+        <Route path="/classic" element={<ProjectSelector />} />
         <Route path="/editor" element={<EditorLayout />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

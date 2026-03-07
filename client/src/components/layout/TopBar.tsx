@@ -60,7 +60,11 @@ export default function TopBar() {
         {currentProject && (
           <>
             <div className="h-4 w-px bg-[#30363d] mx-1" />
-            <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 min-w-0 hover:bg-[#21262d] px-2 py-1 rounded-lg transition-colors"
+              title="返回项目列表"
+            >
               <span className="text-xs text-[#8b949e] truncate max-w-[180px]" title={currentProject.path}>
                 {currentProject.name}
               </span>
@@ -69,7 +73,7 @@ export default function TopBar() {
                   {currentProject.techStack[0]}
                 </span>
               )}
-            </div>
+            </button>
           </>
         )}
 
