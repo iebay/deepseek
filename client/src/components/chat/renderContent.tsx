@@ -1,4 +1,6 @@
 import React from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import CodeBlock from './CodeBlock';
 import ConfirmCard from './ConfirmCard';
 
@@ -12,6 +14,33 @@ interface ParsedAIResponse {
 const DSML_TAG_RE = /< *\|? *DSML *\|? *[^>]*>[\s\S]*?< *\/ *\|? *DSML *\|? *[^>]*>/g;
 const TOOL_CALL_TAG_RE = /<\s*(?:function_calls|invoke(?:\s[^>]*)?)>[\s\S]*?<\/\s*(?:function_calls|invoke)\s*>/g;
 const PARAMETER_TAG_RE = /<\s*parameter(?:\s[^>]*)?>[\s\S]*?<\/\s*parameter\s*>/g;
+
+// Configure marked: GitHub-Flavoured Markdown with line-break support.
+marked.use({ gfm: true, breaks: true });
+
+// Open all links in a new tab (runs once, affects all DOMPurify calls on this page).
+// Guard prevents duplicate hook registration if the module is hot-reloaded.
+let _domPurifyHookRegistered = false;
+if (typeof window !== 'undefined' && !_domPurifyHookRegistered) {
+  _domPurifyHookRegistered = true;
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName === 'A') {
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+}
+
+/** Render a plain-text segment as sanitised Markdown HTML. */
+function renderMarkdownSegment(text: string, key: string | number): React.ReactNode | null {
+  if (!text.trim()) return null;
+  const parsed = marked.parse(text);
+  // marked.parse() is synchronous when no async extensions are configured.
+  const rawHtml = typeof parsed === 'string' ? parsed : '';
+  const clean = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'rel'] });
+  if (!clean.trim()) return null;
+  return <div key={key} className="markdown-content" dangerouslySetInnerHTML={{ __html: clean }} />;
+}
 
 export function renderInline(
   text: string,
@@ -68,11 +97,8 @@ export function renderContent(
 
   while ((match = codeRegex.exec(sanitized)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(
-        <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
-          {renderInline(sanitized.slice(lastIndex, match.index), knownPaths, onOpenFile)}
-        </span>
-      );
+      const node = renderMarkdownSegment(sanitized.slice(lastIndex, match.index), `text-${partIndex++}`);
+      if (node) parts.push(node);
     }
 
     const lang = match[1];
@@ -110,11 +136,8 @@ export function renderContent(
   }
 
   if (lastIndex < sanitized.length) {
-    parts.push(
-      <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
-        {renderInline(sanitized.slice(lastIndex), knownPaths, onOpenFile)}
-      </span>
-    );
+    const node = renderMarkdownSegment(sanitized.slice(lastIndex), `text-${partIndex++}`);
+    if (node) parts.push(node);
   }
 
   return parts;
