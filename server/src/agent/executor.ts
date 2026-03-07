@@ -4,6 +4,8 @@ import { AGENT_TOOLS } from './tools';
 import { AGENT_SYSTEM_PROMPT } from './prompts';
 import { runTool } from './toolRunner';
 import type { ChatMessage, ProjectContext } from '../services/deepseekService';
+import { supportsToolCalling } from '../constants/models';
+import { sanitizeContent } from '../utils/sanitize';
 
 const MAX_ITERATIONS = 15;
 const MAX_RESULT_LENGTH = 3000;
@@ -71,6 +73,32 @@ export async function runAgent(
   let taskComplete = false;
 
   try {
+    // deepseek-reasoner (R1) does not support function calling — stream directly
+    if (!supportsToolCalling(model)) {
+      const directStream = await client.chat.completions.create({
+        model,
+        messages,
+        stream: true,
+        stream_options: { include_usage: true },
+      });
+
+      for await (const chunk of directStream) {
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          const clean = sanitizeContent(delta);
+          if (clean) sseWrite(res, 'content', { content: clean });
+        }
+        if (chunk.usage) {
+          sseWrite(res, 'usage', { usage: chunk.usage, model });
+        }
+      }
+
+      sseWrite(res, 'done', { iterations: 0 });
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
     while (iterations < MAX_ITERATIONS && !taskComplete) {
       iterations++;
 
@@ -93,7 +121,8 @@ export async function runAgent(
       const assistantMessage = choice.message;
 
       if (assistantMessage.content) {
-        sseWrite(res, 'content', { content: assistantMessage.content });
+        const clean = sanitizeContent(assistantMessage.content);
+        if (clean) sseWrite(res, 'content', { content: clean });
       }
 
       if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {

@@ -56,18 +56,30 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
   );
 }
 
+// Defense-in-depth: strip any XML/DSML tool-call tags that may have slipped through from the backend.
+// These are module-level constants so they are not recreated on every render call.
+const DSML_TAG_RE = /< *\|? *DSML *\|? *[^>]*>[\s\S]*?< *\/ *\|? *DSML *\|? *[^>]*>/g;
+const TOOL_CALL_TAG_RE = /<\s*(?:function_calls|invoke(?:\s[^>]*)?)>[\s\S]*?<\/\s*(?:function_calls|invoke)\s*>/g;
+const PARAMETER_TAG_RE = /<\s*parameter(?:\s[^>]*)?>[\s\S]*?<\/\s*parameter\s*>/g;
+
 function renderContent(content: string, onApplyFile?: (f: { path: string; content: string }) => Promise<void>, onApplyAll?: () => Promise<void>, appliedFiles?: Set<string>) {
+  const sanitized = content
+    .replace(DSML_TAG_RE, '')
+    .replace(TOOL_CALL_TAG_RE, '')
+    .replace(PARAMETER_TAG_RE, '')
+    .trimEnd();
+
   const parts: React.ReactNode[] = [];
   const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
   let match;
   let partIndex = 0;
 
-  while ((match = codeRegex.exec(content)) !== null) {
+  while ((match = codeRegex.exec(sanitized)) !== null) {
     if (match.index > lastIndex) {
       parts.push(
         <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
-          {renderInline(content.slice(lastIndex, match.index))}
+          {renderInline(sanitized.slice(lastIndex, match.index))}
         </span>
       );
     }
@@ -105,10 +117,10 @@ function renderContent(content: string, onApplyFile?: (f: { path: string; conten
     lastIndex = match.index + match[0].length;
   }
 
-  if (lastIndex < content.length) {
+  if (lastIndex < sanitized.length) {
     parts.push(
       <span key={`text-${partIndex++}`} className="whitespace-pre-wrap">
-        {renderInline(content.slice(lastIndex))}
+        {renderInline(sanitized.slice(lastIndex))}
       </span>
     );
   }
