@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Bot, User, Trash2, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Send, Bot, User, Trash2, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu, ThumbsUp, ThumbsDown, Copy, Check, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat, streamSmartChat } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
@@ -37,6 +37,9 @@ function MessageBubble({
   appliedFiles,
   toolActions,
   isToolLoading,
+  onRegenerate,
+  onOpenFile,
+  knownFilePaths,
 }: {
   msg: ChatMessage;
   onApplyFile?: (f: { path: string; content: string }) => Promise<void>;
@@ -44,8 +47,14 @@ function MessageBubble({
   appliedFiles?: Set<string>;
   toolActions?: ToolAction[];
   isToolLoading?: boolean;
+  onRegenerate?: () => void;
+  onOpenFile?: (path: string) => void;
+  knownFilePaths?: Set<string>;
 }) {
   const isUser = msg.role === 'user';
+  const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   function renderUserContent() {
     if (typeof msg.content === 'string') {
@@ -85,12 +94,51 @@ function MessageBubble({
             renderUserContent()
           ) : (
             <div className="leading-relaxed">
-              {renderContent(textContent, onApplyFile, onApplyAll, appliedFiles)}
+              {renderContent(textContent, onApplyFile, onApplyAll, appliedFiles, knownFilePaths, onOpenFile)}
             </div>
           )}
         </div>
         {msg.timestamp && (
           <span className="text-[10px] text-[var(--text-tertiary)] px-1">{formatTime(msg.timestamp)}</span>
+        )}
+        {!isUser && (
+          <div className="flex items-center gap-1 px-1 mt-0.5">
+            <button
+              title="有帮助"
+              onClick={() => setLiked(v => { const next = !v; if (next) setDisliked(false); return next; })}
+              className={`p-0.5 rounded transition-colors ${liked ? 'text-[var(--accent-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+            >
+              <ThumbsUp size={14} />
+            </button>
+            <button
+              title="没有帮助"
+              onClick={() => setDisliked(v => { const next = !v; if (next) setLiked(false); return next; })}
+              className={`p-0.5 rounded transition-colors ${disliked ? 'text-[var(--accent-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+            >
+              <ThumbsDown size={14} />
+            </button>
+            <button
+              title="复制"
+              onClick={() => {
+                navigator.clipboard.writeText(textContent).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }).catch(() => {});
+              }}
+              className="p-0.5 rounded transition-colors text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+            >
+              {copied ? <Check size={14} className="text-[var(--accent-primary)]" /> : <Copy size={14} />}
+            </button>
+            {onRegenerate && (
+              <button
+                title="重新生成"
+                onClick={onRegenerate}
+                className="p-0.5 rounded transition-colors text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+              >
+                <RefreshCw size={14} />
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -152,7 +200,7 @@ export default function ChatPanel() {
     clearChat, isAiLoading, setAiLoading, selectedModel,
     currentProject, fileTree, activeTabPath, openTabs,
     showToast, pushOperation, smartMode, toggleSmartMode,
-    aiMode, setAiMode,
+    aiMode, setAiMode, truncateChatMessages, openTab, setActiveTab,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -213,6 +261,33 @@ export default function ChatPanel() {
     }
     return walk(fileTree, 0);
   }, [fileTree]);
+
+  const knownFilePaths = useMemo(() => {
+    const paths = new Set<string>();
+    function collectPaths(node: FileNode | null) {
+      if (!node) return;
+      if (node.type === 'file') { paths.add(node.path); }
+      if (node.children) node.children.forEach(collectPaths);
+    }
+    collectPaths(fileTree);
+    return paths;
+  }, [fileTree]);
+
+  const handleOpenFile = useCallback(async (filePath: string) => {
+    try {
+      const existing = openTabs.find(t => t.path === filePath);
+      if (existing) {
+        setActiveTab(existing.path);
+        return;
+      }
+      const content = await fetchFileContent(filePath);
+      const name = filePath.split('/').pop() ?? filePath;
+      openTab({ path: filePath, name, content, isDirty: false });
+      setActiveTab(filePath);
+    } catch {
+      // ignore errors for unresolvable paths
+    }
+  }, [openTabs, openTab, setActiveTab]);
 
   async function handleSend(text?: string) {
     const msgText = (text ?? input).trim();
@@ -371,6 +446,108 @@ export default function ChatPanel() {
             completionTokens: usage.completionTokens,
             totalTokens: usage.totalTokens,
           }).catch(() => { /* ignore */ });
+        },
+      });
+    }
+  }
+
+  async function handleRegenerate(msgIndex: number) {
+    if (isAiLoading) return;
+    const userMsg = chatMessages[msgIndex - 1];
+    if (!userMsg || userMsg.role !== 'user') return;
+    const userText = typeof userMsg.content === 'string'
+      ? userMsg.content
+      : (userMsg.content.find((p: MultimodalContentPart) => p.type === 'text')?.text ?? '');
+    if (!userText) return;
+
+    // Keep all messages before the user message (remove user + AI pair)
+    const keepCount = msgIndex - 1;
+    // Capture prior messages before truncation (chatMessages closure will be stale after truncateChatMessages)
+    const priorMessages = chatMessages.slice(0, keepCount);
+    truncateChatMessages(keepCount);
+    // Clear tool actions for regenerated index
+    setMessageToolActions(prev => {
+      const next = new Map(prev);
+      next.delete(msgIndex);
+      return next;
+    });
+
+    // Re-send using the captured context from the (now-truncated) chat history
+    const newUserMsg: ChatMessage = { role: 'user', content: userText, timestamp: Date.now() };
+    addChatMessage(newUserMsg);
+    const newAssistantMsg: ChatMessage = { role: 'assistant', content: '', timestamp: Date.now() };
+    addChatMessage(newAssistantMsg);
+    setAiLoading(true);
+    setElapsed(0);
+
+    const newAssistantMsgIndex = keepCount + 1;
+
+    const activeTabObj = openTabs.find(t => t.path === activeTabPath);
+    const context = {
+      fileTree: fileTreeText,
+      techStack: currentProject?.techStack ?? [],
+      currentFile: activeTabObj?.path,
+      currentFileContent: activeTabObj?.content,
+      relatedFiles: [],
+      projectRoot: currentProject?.path,
+    };
+
+    const messagesForStream = [...priorMessages, newUserMsg];
+    let fullContent = '';
+    const useSmartMode = smartMode && !!currentProject?.path;
+
+    if (useSmartMode) {
+      setLoadingMsgIndex(newAssistantMsgIndex);
+      setMessageToolActions(prev => {
+        const next = new Map(prev);
+        next.set(newAssistantMsgIndex, []);
+        return next;
+      });
+      abortRef.current = streamSmartChat({
+        messages: messagesForStream,
+        context,
+        model: selectedModel,
+        onChunk: (chunk) => { fullContent += chunk; updateLastAssistantMessage(fullContent); },
+        onDone: () => { setAiLoading(false); setLoadingMsgIndex(null); abortRef.current = null; },
+        onError: (err) => { updateLastAssistantMessage(`错误: ${err}`); setAiLoading(false); setLoadingMsgIndex(null); abortRef.current = null; },
+        onUsage: (usage, model) => {
+          const { inputPrice, outputPrice } = getModelPrices(model);
+          const cost = (usage.promptTokens / 1000) * inputPrice + (usage.completionTokens / 1000) * outputPrice;
+          setLastUsage({ tokens: usage.totalTokens, cost });
+          recordTokenUsage({ model, promptTokens: usage.promptTokens, completionTokens: usage.completionTokens, totalTokens: usage.totalTokens }).catch(() => {});
+        },
+        onToolCall: (event) => {
+          setMessageToolActions(prev => {
+            const next = new Map(prev);
+            const existing = next.get(newAssistantMsgIndex) ?? [];
+            next.set(newAssistantMsgIndex, [...existing, { toolCallId: event.toolCallId, tool: event.tool, args: event.args, summary: '...' }]);
+            return next;
+          });
+        },
+        onToolResult: (toolCallId, _tool, summary) => {
+          setMessageToolActions(prev => {
+            const next = new Map(prev);
+            const existing = [...(next.get(newAssistantMsgIndex) ?? [])];
+            const idx = existing.findIndex(a => a.toolCallId === toolCallId);
+            if (idx >= 0) existing[idx] = { ...existing[idx], summary };
+            next.set(newAssistantMsgIndex, existing);
+            return next;
+          });
+        },
+      });
+    } else {
+      abortRef.current = streamAIChat({
+        messages: messagesForStream,
+        context,
+        model: selectedModel,
+        onChunk: (chunk) => { fullContent += chunk; updateLastAssistantMessage(fullContent); },
+        onDone: () => { setAiLoading(false); abortRef.current = null; },
+        onError: (err) => { updateLastAssistantMessage(`错误: ${err}`); setAiLoading(false); abortRef.current = null; },
+        onUsage: (usage, model) => {
+          const { inputPrice, outputPrice } = getModelPrices(model);
+          const cost = (usage.promptTokens / 1000) * inputPrice + (usage.completionTokens / 1000) * outputPrice;
+          setLastUsage({ tokens: usage.totalTokens, cost });
+          recordTokenUsage({ model, promptTokens: usage.promptTokens, completionTokens: usage.completionTokens, totalTokens: usage.totalTokens }).catch(() => {});
         },
       });
     }
@@ -561,6 +738,9 @@ export default function ChatPanel() {
                 appliedFiles={appliedFiles}
                 toolActions={messageToolActions.get(i)}
                 isToolLoading={loadingMsgIndex === i && isAiLoading}
+                onRegenerate={msg.role === 'assistant' && i > 0 ? () => handleRegenerate(i) : undefined}
+                onOpenFile={handleOpenFile}
+                knownFilePaths={knownFilePaths}
               />
             ))}
             {isTyping && (
