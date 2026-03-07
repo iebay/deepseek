@@ -9,9 +9,30 @@ interface ParsedAIResponse {
 
 // Defense-in-depth: strip any XML/DSML tool-call tags that may have slipped through from the backend.
 // These are module-level constants so they are not recreated on every render call.
-const DSML_TAG_RE = /< *\|? *DSML *\|? *[^>]*>[\s\S]*?< *\/ *\|? *DSML *\|? *[^>]*>/g;
+const DSML_TAG_RE = /< *[\s|]*DSML[\s|]*[^>]*>[\s\S]*?< *\/[\s|]*DSML[\s|]*[^>]*>/g;
+const DSML_CATCH_ALL_RE = /< *\|[^>]*DSML[^>]*>[\s\S]*?< *\/[^>]*DSML[^>]*>/g;
 const TOOL_CALL_TAG_RE = /<\s*(?:function_calls|invoke(?:\s[^>]*)?)>[\s\S]*?<\/\s*(?:function_calls|invoke)\s*>/g;
 const PARAMETER_TAG_RE = /<\s*parameter(?:\s[^>]*)?>[\s\S]*?<\/\s*parameter\s*>/g;
+const DSML_ORPHAN_CLOSE_RE = /< *\/[\s|]*DSML[\s|]*[^>]*>/g;
+const TOOL_ORPHAN_CLOSE_RE = /<\/\s*(?:function_calls|invoke|parameter)\s*>/g;
+
+function sanitize(text: string): string {
+  let result = text;
+  // Loop until stable: each pass strips one nesting level of tags.
+  // Cap at 10 iterations to guard against pathological input.
+  for (let i = 0; i < 10; i++) {
+    const next = result
+      .replace(DSML_CATCH_ALL_RE, '')
+      .replace(DSML_TAG_RE, '')
+      .replace(TOOL_CALL_TAG_RE, '')
+      .replace(PARAMETER_TAG_RE, '')
+      .replace(DSML_ORPHAN_CLOSE_RE, '')
+      .replace(TOOL_ORPHAN_CLOSE_RE, '');
+    if (next === result) break;
+    result = next;
+  }
+  return result;
+}
 
 export function renderInline(
   text: string,
@@ -54,11 +75,7 @@ export function renderContent(
   knownPaths?: Set<string>,
   onOpenFile?: (path: string) => void,
 ): React.ReactNode[] {
-  const sanitized = content
-    .replace(DSML_TAG_RE, '')
-    .replace(TOOL_CALL_TAG_RE, '')
-    .replace(PARAMETER_TAG_RE, '')
-    .trimEnd();
+  const sanitized = sanitize(content).trimEnd();
 
   const parts: React.ReactNode[] = [];
   const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
