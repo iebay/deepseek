@@ -105,4 +105,107 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'semantic_search',
+      description:
+        '按语义/意图搜索代码。当你不知道确切的函数名或变量名时，可以用自然语言描述你要找的功能。例如："处理用户登录认证的逻辑"、"数据库连接配置"',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: '自然语言描述你要查找的代码功能' },
+          file_extensions: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '可选，限定搜索的文件类型，如 [".ts", ".tsx"]',
+          },
+          max_results: { type: 'number', description: '返回结果数量，默认 5' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_log',
+      description: '获取 git 提交历史。可以查看整个项目或指定文件的提交记录。',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: '可选，限定到某个文件的历史' },
+          limit: { type: 'number', description: '返回的提交数量，默认 10' },
+          since: { type: 'string', description: '可选，起始日期，如 "2024-01-01" 或 "1 week ago"' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_diff',
+      description: '查看两个 commit 之间的代码差异，或查看未提交的改动。',
+      parameters: {
+        type: 'object',
+        properties: {
+          from: { type: 'string', description: 'commit SHA 或引用（如 HEAD~3），默认 HEAD~1' },
+          to: { type: 'string', description: 'commit SHA 或引用，默认 HEAD' },
+          path: { type: 'string', description: '可选，限定到某个文件' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_blame',
+      description: '查看文件每一行的最后修改者和修改时间。用于追溯代码变更。',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: '文件路径' },
+          start_line: { type: 'number', description: '可选，起始行号' },
+          end_line: { type: 'number', description: '可选，结束行号' },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'find_references',
+      description:
+        '搜索指定符号（函数名、类名、组件名、变量名）在项目中的所有引用位置。包括 import 语句和实际调用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          symbol: { type: 'string', description: '要查找的符号名' },
+          type: {
+            type: 'string',
+            enum: ['function', 'class', 'component', 'variable', 'any'],
+            description: '符号类型，默认 any（搜索所有类型）',
+          },
+        },
+        required: ['symbol'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'web_search',
+      description:
+        '搜索网络获取最新的技术文档、API 参考、npm 包信息、错误解决方案等。当你不确定某个库的用法或遇到不熟悉的错误时使用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: '搜索关键词' },
+          max_results: { type: 'number', description: '返回结果数量，默认 5' },
+        },
+        required: ['query'],
+      },
+    },
+  },
 ];

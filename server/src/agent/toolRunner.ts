@@ -2,6 +2,8 @@ import { execFileSync, execSync } from 'child_process';
 import path from 'path';
 import { readFile, writeFile, getFileTree } from '../services/fileService';
 import { isPathSafe, getAllowedRoots } from '../utils/pathUtils';
+import { search as semanticSearch } from '../services/semanticSearchService';
+import { search as webSearch } from '../services/webSearchService';
 
 const SAFE_COMMANDS = /^(npm |npx |tsc |eslint |prettier |cat |ls |dir |echo )/;
 const SHELL_METACHARACTERS = /[;&|`$<>\\]/;
@@ -180,6 +182,192 @@ export async function runTool(
           summary: summary || '任务已完成',
           files_modified: filesModified || [],
         });
+      }
+
+      case 'semantic_search': {
+        const query = args.query as string;
+        if (!query) return '错误: 缺少 query 参数';
+        const fileExtensions = args.file_extensions as string[] | undefined;
+        const maxResults = (args.max_results as number | undefined) ?? 5;
+        const results = semanticSearch(projectRoot, query, { fileExtensions, maxResults });
+        if (results.length === 0) return '未找到相关代码文件';
+        const output = results
+          .map((r, i) => {
+            const relPath = path.relative(projectRoot, r.filePath);
+            return `[${i + 1}] ${relPath} (相关性: ${r.score.toFixed(3)})\n${r.snippet}`;
+          })
+          .join('\n\n---\n\n');
+        return truncate(output);
+      }
+
+      case 'git_log': {
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const limit = (args.limit as number | undefined) ?? 10;
+        const logArgs: string[] = [
+          'log',
+          `--format=%h %ai %an: %s`,
+          `-n`,
+          String(Math.min(limit, 100)),
+        ];
+        if (args.since) logArgs.push(`--since=${args.since as string}`);
+        if (args.path) {
+          const filePath = args.path as string;
+          const absPath = path.isAbsolute(filePath)
+            ? filePath
+            : path.join(projectRoot, filePath);
+          logArgs.push('--', absPath);
+        }
+        try {
+          const result = execFileSync('git', logArgs, {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 15000,
+          });
+          return result.trim() || '（无提交记录）';
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `获取 git 日志失败: ${msg}`;
+        }
+      }
+
+      case 'git_diff': {
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const from = (args.from as string | undefined) ?? 'HEAD~1';
+        const to = (args.to as string | undefined) ?? 'HEAD';
+        const diffArgs: string[] = ['diff', from, to];
+        if (args.path) {
+          const filePath = args.path as string;
+          const absPath = path.isAbsolute(filePath)
+            ? filePath
+            : path.join(projectRoot, filePath);
+          diffArgs.push('--', absPath);
+        }
+        try {
+          const result = execFileSync('git', diffArgs, {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 15000,
+            maxBuffer: 1024 * 1024,
+          });
+          return truncate(result.trim() || '（无差异）');
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `获取 git diff 失败: ${msg}`;
+        }
+      }
+
+      case 'git_blame': {
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const filePath = args.path as string;
+        if (!filePath) return '错误: 缺少 path 参数';
+        const absPath = path.isAbsolute(filePath)
+          ? filePath
+          : path.join(projectRoot, filePath);
+        if (!isPathSafe(absPath, allowedRoots)) {
+          return '错误: 文件路径不在允许的目录范围内';
+        }
+        const blameArgs: string[] = ['blame'];
+        const startLine = args.start_line as number | undefined;
+        const endLine = args.end_line as number | undefined;
+        if (startLine !== undefined && endLine !== undefined) {
+          blameArgs.push(`-L`, `${startLine},${endLine}`);
+        } else if (startLine !== undefined) {
+          blameArgs.push(`-L`, `${startLine},+50`);
+        }
+        blameArgs.push(absPath);
+        try {
+          const result = execFileSync('git', blameArgs, {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 15000,
+            maxBuffer: 512 * 1024,
+          });
+          return truncate(result.trim());
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `获取 git blame 失败: ${msg}`;
+        }
+      }
+
+      case 'find_references': {
+        const symbol = args.symbol as string;
+        if (!symbol) return '错误: 缺少 symbol 参数';
+        // Only allow word characters and $ to avoid regex injection
+        if (!/^[\w$]+$/.test(symbol)) {
+          return '错误: symbol 只能包含字母、数字、_ 或 $';
+        }
+        // Escape any regex-special characters before embedding in patterns
+        const escapedSymbol = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const excludes = [
+          '--exclude-dir=node_modules',
+          '--exclude-dir=.git',
+          '--exclude-dir=dist',
+          '--exclude-dir=build',
+          '--exclude-dir=coverage',
+          '--exclude-dir=.next',
+        ];
+        const includes = [
+          '--include=*.ts', '--include=*.tsx',
+          '--include=*.js', '--include=*.jsx',
+        ];
+        const patterns = [
+          { label: 'import', regex: `(import|require).*${escapedSymbol}` },
+          { label: 'call', regex: `${escapedSymbol}\\(` },
+          { label: 'jsx', regex: `<${escapedSymbol}[\\s/>]` },
+          { label: 'type', regex: `: ${escapedSymbol}[\\s<,;)]` },
+        ];
+        const grouped: Record<string, string[]> = {};
+        for (const { label, regex } of patterns) {
+          const grepArgs = ['-rn', '-E', ...excludes, ...includes, '--', regex, projectRoot];
+          try {
+            const result = execFileSync('grep', grepArgs, {
+              encoding: 'utf-8',
+              timeout: 10000,
+              maxBuffer: 512 * 1024,
+            });
+            const lines = result.split('\n').filter(Boolean).slice(0, 30);
+            if (lines.length > 0) grouped[label] = lines;
+          } catch (err: unknown) {
+            const execErr = err as { status?: number };
+            if (execErr.status !== 1) {
+              grouped[label] = [`搜索出错`];
+            }
+          }
+        }
+        if (Object.keys(grouped).length === 0) return `未找到符号 "${symbol}" 的引用`;
+        const output = Object.entries(grouped)
+          .map(([label, lines]) => `### ${label}\n${lines.join('\n')}`)
+          .join('\n\n');
+        return truncate(output);
+      }
+
+      case 'web_search': {
+        const query = args.query as string;
+        if (!query) return '错误: 缺少 query 参数';
+        const maxResults = (args.max_results as number | undefined) ?? 5;
+        try {
+          const results = await webSearch(query, Math.min(maxResults, 10));
+          if (results.length === 0) return '未找到搜索结果';
+          return results
+            .map((r, i) => `[${i + 1}] ${r.title}\n${r.url}\n${r.snippet}`)
+            .join('\n\n');
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `网络搜索失败: ${msg}`;
+        }
       }
 
       default:
