@@ -9,6 +9,50 @@ const SAFE_COMMANDS = /^(npm |npx |tsc |eslint |prettier |cat |ls |dir |echo )/;
 const SHELL_METACHARACTERS = /[;&|`$<>\\]/;
 const MAX_RESULT_LENGTH = 3000;
 
+const GITHUB_API_BASE = 'https://api.github.com';
+
+function githubHeaders(token: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'DeepSeek-Code-Agent',
+  };
+}
+
+async function createGithubBranch(
+  owner: string,
+  repo: string,
+  branchName: string,
+  sha: string,
+  token: string,
+): Promise<string> {
+  const url = `${GITHUB_API_BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha }),
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    return `GitHub API 错误 (${resp.status}): ${body}`;
+  }
+  return `分支已创建: ${branchName}`;
+}
+
+function isValidGitRef(ref: string): boolean {
+  // Allow only safe characters; also reject git-specific invalid patterns
+  return (
+    /^[a-zA-Z0-9_\-/]+$/.test(ref) &&
+    !ref.includes('..') &&
+    !ref.startsWith('-') &&
+    !ref.startsWith('/') &&
+    !ref.endsWith('/') &&
+    !ref.endsWith('.lock') &&
+    !ref.includes('@{') &&
+    !/\/\//.test(ref)
+  );
+}
+
 function truncate(str: string, max = MAX_RESULT_LENGTH): string {
   if (str.length <= max) return str;
   return str.slice(0, max) + `\n...[输出已截断，共 ${str.length} 字符]`;
@@ -367,6 +411,245 @@ export async function runTool(
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : '未知错误';
           return `网络搜索失败: ${msg}`;
+        }
+      }
+
+      // ── GitHub API remote tools ────────────────────────────────────────────
+
+      case 'github_read_file': {
+        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
+        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const owner = args.owner as string;
+        const repo = args.repo as string;
+        const filePath = args.path as string;
+        if (!owner || !repo || !filePath) return '错误: 缺少必要参数 owner、repo 或 path';
+        const ref = args.ref as string | undefined;
+        const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${filePath.split('/').map(encodeURIComponent).join('/')}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`;
+        const resp = await fetch(url, { headers: githubHeaders(token) });
+        if (!resp.ok) {
+          const body = await resp.text();
+          return `GitHub API 错误 (${resp.status}): ${body}`;
+        }
+        const data = await resp.json() as { content?: string; encoding?: string; name?: string };
+        if (data.encoding !== 'base64' || !data.content) {
+          return '错误: 返回内容不是 base64 编码文件，可能是目录';
+        }
+        const decoded = Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8');
+        return truncate(decoded);
+      }
+
+      case 'github_write_file': {
+        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
+        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const owner = args.owner as string;
+        const repo = args.repo as string;
+        const filePath = args.path as string;
+        const content = args.content as string;
+        const message = args.message as string;
+        if (!owner || !repo || !filePath || content == null || !message) {
+          return '错误: 缺少必要参数 owner、repo、path、content 或 message';
+        }
+        const branch = args.branch as string | undefined;
+        const sha = args.sha as string | undefined;
+        const encoded = Buffer.from(content, 'utf-8').toString('base64');
+        const body: Record<string, string> = { message, content: encoded };
+        if (branch) body['branch'] = branch;
+        if (sha) body['sha'] = sha;
+        const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${filePath.split('/').map(encodeURIComponent).join('/')}`;
+        const resp = await fetch(url, {
+          method: 'PUT',
+          headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+          const errBody = await resp.text();
+          return `GitHub API 错误 (${resp.status}): ${errBody}`;
+        }
+        const result = await resp.json() as { commit?: { sha?: string } };
+        return `文件已成功写入 GitHub: ${filePath}，commit SHA: ${result.commit?.sha ?? '未知'}`;
+      }
+
+      case 'github_list_repo': {
+        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
+        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const owner = args.owner as string;
+        const repo = args.repo as string;
+        if (!owner || !repo) return '错误: 缺少必要参数 owner 或 repo';
+        const dirPath = (args.path as string | undefined) ?? '';
+        const ref = args.ref as string | undefined;
+        const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${dirPath.split('/').filter(Boolean).map(encodeURIComponent).join('/')}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`;
+        const resp = await fetch(url, { headers: githubHeaders(token) });
+        if (!resp.ok) {
+          const body = await resp.text();
+          return `GitHub API 错误 (${resp.status}): ${body}`;
+        }
+        const data = await resp.json() as Array<{ name: string; type: string; size?: number; path: string }>;
+        if (!Array.isArray(data)) return '错误: 返回内容不是目录列表，可能是文件';
+        const lines = data.map(item => `${item.type === 'dir' ? '[目录]' : '[文件]'} ${item.path}${item.size !== undefined ? ` (${item.size} bytes)` : ''}`);
+        return lines.join('\n') || '（空目录）';
+      }
+
+      case 'github_create_branch': {
+        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
+        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const owner = args.owner as string;
+        const repo = args.repo as string;
+        const branchName = args.branch_name as string;
+        if (!owner || !repo || !branchName) return '错误: 缺少必要参数 owner、repo 或 branch_name';
+        const fromBranch = (args.from_branch as string | undefined) ?? 'main';
+        // Get SHA of source branch
+        const refUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/${encodeURIComponent(fromBranch)}`;
+        const refResp = await fetch(refUrl, { headers: githubHeaders(token) });
+        if (!refResp.ok) {
+          // Fallback: try master
+          if (fromBranch === 'main') {
+            const masterUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/master`;
+            const masterResp = await fetch(masterUrl, { headers: githubHeaders(token) });
+            if (!masterResp.ok) {
+              const body = await masterResp.text();
+              return `GitHub API 错误: 无法获取源分支 SHA (${masterResp.status}): ${body}`;
+            }
+            const masterData = await masterResp.json() as { object?: { sha?: string } };
+            const sha = masterData.object?.sha;
+            if (!sha) return '错误: 无法获取源分支 SHA';
+            return createGithubBranch(owner, repo, branchName, sha, token);
+          }
+          const body = await refResp.text();
+          return `GitHub API 错误 (${refResp.status}): ${body}`;
+        }
+        const refData = await refResp.json() as { object?: { sha?: string } };
+        const sha = refData.object?.sha;
+        if (!sha) return '错误: 无法获取源分支 SHA';
+        return createGithubBranch(owner, repo, branchName, sha, token);
+      }
+
+      case 'github_create_pr': {
+        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
+        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const owner = args.owner as string;
+        const repo = args.repo as string;
+        const title = args.title as string;
+        const head = args.head as string;
+        if (!owner || !repo || !title || !head) return '错误: 缺少必要参数 owner、repo、title 或 head';
+        const base = (args.base as string | undefined) ?? 'main';
+        const body = (args.body as string | undefined) ?? '';
+        const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`;
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, body, head, base }),
+        });
+        if (!resp.ok) {
+          const errBody = await resp.text();
+          return `GitHub API 错误 (${resp.status}): ${errBody}`;
+        }
+        const pr = await resp.json() as { html_url?: string; number?: number };
+        return `Pull Request 已创建: #${pr.number} — ${pr.html_url}`;
+      }
+
+      // ── Local git tools ────────────────────────────────────────────────────
+
+      case 'git_commit': {
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const message = args.message as string;
+        if (!message) return '错误: 缺少 message 参数';
+        try {
+          execFileSync('git', ['add', '-A'], { cwd: projectRoot, encoding: 'utf-8', timeout: 15000 });
+          const result = execFileSync('git', ['commit', '-m', message], {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 15000,
+          });
+          return result.trim();
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `git commit 失败: ${msg}`;
+        }
+      }
+
+      case 'git_push': {
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const remote = (args.remote as string | undefined) ?? 'origin';
+        const branch = args.branch as string | undefined;
+        if (!isValidGitRef(remote)) return '错误: remote 包含非法字符';
+        if (branch !== undefined && !isValidGitRef(branch)) return '错误: branch 包含非法字符';
+        const pushArgs = ['push', remote];
+        if (branch) pushArgs.push(branch);
+        try {
+          const result = execFileSync('git', pushArgs, {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 60000,
+          });
+          return result.trim() || 'push 成功';
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `git push 失败: ${msg}`;
+        }
+      }
+
+      case 'git_pull': {
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(projectRoot, allowedRoots)) {
+          return '错误: 项目根目录不在允许的目录范围内';
+        }
+        const remote = (args.remote as string | undefined) ?? 'origin';
+        const branch = args.branch as string | undefined;
+        if (!isValidGitRef(remote)) return '错误: remote 包含非法字符';
+        if (branch !== undefined && !isValidGitRef(branch)) return '错误: branch 包含非法字符';
+        const pullArgs = ['pull', remote];
+        if (branch) pullArgs.push(branch);
+        try {
+          const result = execFileSync('git', pullArgs, {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 60000,
+          });
+          return result.trim() || 'pull 成功';
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `git pull 失败: ${msg}`;
+        }
+      }
+
+      case 'git_clone': {
+        const url = args.url as string;
+        if (!url) return '错误: 缺少 url 参数';
+        // Validate URL: must be https:// or git@ with no shell metacharacters
+        if (!/^(https?:\/\/|git@)/.test(url)) {
+          return '错误: url 必须是合法的 https:// 或 git@ 地址';
+        }
+        if (/[\s;&|`$<>'"]/.test(url)) {
+          return '错误: url 包含非法字符';
+        }
+        const directory = args.directory as string | undefined;
+        const cloneArgs = ['clone', url];
+        if (directory) {
+          const allowedRoots = getAllowedRoots();
+          const absDir = path.resolve(
+            path.isAbsolute(directory) ? directory : path.join(projectRoot, directory),
+          );
+          if (!isPathSafe(absDir, allowedRoots)) {
+            return '错误: 克隆目标目录不在允许的目录范围内';
+          }
+          cloneArgs.push(absDir);
+        }
+        try {
+          const result = execFileSync('git', cloneArgs, {
+            cwd: projectRoot,
+            encoding: 'utf-8',
+            timeout: 120000,
+          });
+          return result.trim() || 'clone 成功';
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '未知错误';
+          return `git clone 失败: ${msg}`;
         }
       }
 

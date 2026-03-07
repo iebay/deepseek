@@ -208,4 +208,153 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ── GitHub API remote tools ──────────────────────────────────────────────
+  {
+    type: 'function' as const,
+    function: {
+      name: 'github_read_file',
+      description: '从远程 GitHub 仓库读取文件内容（无需克隆）。',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者（用户名或组织名）' },
+          repo: { type: 'string', description: '仓库名称' },
+          path: { type: 'string', description: '文件路径' },
+          ref: { type: 'string', description: '可选，分支名、标签或 commit SHA，默认为默认分支' },
+        },
+        required: ['owner', 'repo', 'path'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'github_write_file',
+      description: '在远程 GitHub 仓库创建或更新文件（生成一个 commit）。更新已有文件时需提供 sha。',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者' },
+          repo: { type: 'string', description: '仓库名称' },
+          path: { type: 'string', description: '文件路径' },
+          content: { type: 'string', description: '文件的完整文本内容' },
+          message: { type: 'string', description: 'commit 消息' },
+          branch: { type: 'string', description: '可选，目标分支，默认为默认分支' },
+          sha: { type: 'string', description: '可选，更新已有文件时需要提供该文件当前的 SHA' },
+        },
+        required: ['owner', 'repo', 'path', 'content', 'message'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'github_list_repo',
+      description: '列出远程 GitHub 仓库中某目录下的文件和子目录。',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者' },
+          repo: { type: 'string', description: '仓库名称' },
+          path: { type: 'string', description: '可选，目录路径，默认为根目录' },
+          ref: { type: 'string', description: '可选，分支名、标签或 commit SHA' },
+        },
+        required: ['owner', 'repo'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'github_create_branch',
+      description: '在远程 GitHub 仓库创建新分支。',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者' },
+          repo: { type: 'string', description: '仓库名称' },
+          branch_name: { type: 'string', description: '新分支名称' },
+          from_branch: { type: 'string', description: '可选，基于哪个分支创建，默认为 main 或 master' },
+        },
+        required: ['owner', 'repo', 'branch_name'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'github_create_pr',
+      description: '在远程 GitHub 仓库创建 Pull Request。',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者' },
+          repo: { type: 'string', description: '仓库名称' },
+          title: { type: 'string', description: 'PR 标题' },
+          body: { type: 'string', description: '可选，PR 描述内容' },
+          head: { type: 'string', description: '源分支（包含变更的分支）' },
+          base: { type: 'string', description: '可选，目标分支，默认为 main' },
+        },
+        required: ['owner', 'repo', 'title', 'head'],
+      },
+    },
+  },
+  // ── Local git tools ──────────────────────────────────────────────────────
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_commit',
+      description: '将所有变更暂存（git add -A）并提交到本地仓库。',
+      parameters: {
+        type: 'object',
+        properties: {
+          message: { type: 'string', description: 'commit 消息' },
+        },
+        required: ['message'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_push',
+      description: '将本地提交推送到远程仓库。',
+      parameters: {
+        type: 'object',
+        properties: {
+          remote: { type: 'string', description: '可选，远程名称，默认 origin' },
+          branch: { type: 'string', description: '可选，分支名称，默认为当前分支' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_pull',
+      description: '从远程仓库拉取最新变更。',
+      parameters: {
+        type: 'object',
+        properties: {
+          remote: { type: 'string', description: '可选，远程名称，默认 origin' },
+          branch: { type: 'string', description: '可选，分支名称' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'git_clone',
+      description: '克隆远程仓库到本地目录。目标目录必须在允许的工作区范围内。',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: { type: 'string', description: '仓库 URL（https:// 或 git@）' },
+          directory: { type: 'string', description: '可选，克隆到的本地目录路径' },
+        },
+        required: ['url'],
+      },
+    },
+  },
 ];
