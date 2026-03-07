@@ -116,7 +116,9 @@ export async function runTool(
         const absPath = path.join(projectRoot, filePath);
         const normalised = path.resolve(absPath);
         // Defense-in-depth: ensure the resolved path stays inside projectRoot
-        if (!normalised.startsWith(path.resolve(projectRoot) + path.sep) && normalised !== path.resolve(projectRoot)) {
+        const resolvedRoot = path.resolve(projectRoot);
+        const withinRoot = normalised.startsWith(resolvedRoot + path.sep) || normalised === resolvedRoot;
+        if (!withinRoot) {
           return '错误: 文件路径不在允许的目录范围内';
         }
         const allowedRoots = getAllowedRoots();

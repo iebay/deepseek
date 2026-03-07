@@ -163,6 +163,7 @@ export default function ChatPanel() {
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
   const [lastUsage, setLastUsage] = useState<{ tokens: number; cost: number } | null>(null);
   // Map from message index → tool actions for that assistant message
+  // TODO: Consider useReducer for messageToolActions to avoid frequent Map copies on each tool call
   const [messageToolActions, setMessageToolActions] = useState<Map<number, ToolAction[]>>(new Map());
   // Index of the currently-loading assistant message (for live tool trace)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState<number | null>(null);
@@ -211,7 +212,6 @@ export default function ChatPanel() {
       return `${indent}${n.name}`;
     }
     return walk(fileTree, 0);
-    // TODO: Consider useReducer for messageToolActions to avoid Map state frequent copies
   }, [fileTree]);
 
   async function handleSend(text?: string) {
