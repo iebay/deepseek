@@ -67,6 +67,111 @@ const SMART_CHAT_TOOLS: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'write_file',
+      description: '创建或修改项目中的文件。写入完整的文件内容（不是 diff）。',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: '文件路径（相对于项目根目录）' },
+          content: { type: 'string', description: '完整的文件内容' },
+        },
+        required: ['path', 'content'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'github_read_file',
+      description: '从 GitHub 远程仓库读取文件内容（需要配置 GITHUB_TOKEN 环境变量）',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: 'GitHub 仓库所有者' },
+          repo: { type: 'string', description: 'GitHub 仓库名称' },
+          path: { type: 'string', description: '文件路径' },
+          ref: { type: 'string', description: '分支名或 commit SHA，默认为默认分支' },
+        },
+        required: ['owner', 'repo', 'path'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'github_write_file',
+      description: '在 GitHub 远程仓库创建或更新文件（需要配置 GITHUB_TOKEN 环境变量）',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: 'GitHub 仓库所有者' },
+          repo: { type: 'string', description: 'GitHub 仓库名称' },
+          path: { type: 'string', description: '文件路径' },
+          content: { type: 'string', description: '完整的文件内容' },
+          message: { type: 'string', description: 'commit 消息' },
+          branch: { type: 'string', description: '目标分支名' },
+          sha: { type: 'string', description: '被更新文件当前的 blob sha（更新已有文件时必须提供）' },
+        },
+        required: ['owner', 'repo', 'path', 'content', 'message'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'github_list_repo',
+      description: '列出 GitHub 远程仓库的目录内容（需要配置 GITHUB_TOKEN 环境变量）',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: 'GitHub 仓库所有者' },
+          repo: { type: 'string', description: 'GitHub 仓库名称' },
+          path: { type: 'string', description: '目录路径，默认仓库根目录' },
+          ref: { type: 'string', description: '分支名或 commit SHA' },
+        },
+        required: ['owner', 'repo'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'github_create_branch',
+      description: '在 GitHub 远程仓库创建新分支（需要配置 GITHUB_TOKEN 环境变量）',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: 'GitHub 仓库所有者' },
+          repo: { type: 'string', description: 'GitHub 仓库名称' },
+          branch_name: { type: 'string', description: '新分支名称' },
+          from_branch: { type: 'string', description: '源分支，默认 main' },
+        },
+        required: ['owner', 'repo', 'branch_name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'github_create_pr',
+      description: '在 GitHub 远程仓库创建 Pull Request（需要配置 GITHUB_TOKEN 环境变量）',
+      parameters: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: 'GitHub 仓库所有者' },
+          repo: { type: 'string', description: 'GitHub 仓库名称' },
+          title: { type: 'string', description: 'PR 标题' },
+          body: { type: 'string', description: 'PR 描述' },
+          head: { type: 'string', description: '源分支' },
+          base: { type: 'string', description: '目标分支，默认 main' },
+        },
+        required: ['owner', 'repo', 'title', 'head'],
+      },
+    },
+  },
 ];
 
 const SMART_CHAT_BASE_PROMPT = `你是 DeepSeek Code AI 助手——一个集成在代码编辑器中的全栈开发 AI。你拥有完整的项目上下文访问权限，可以直接读取用户的本地文件。
@@ -103,9 +208,39 @@ const SMART_CHAT_BASE_PROMPT = `你是 DeepSeek Code AI 助手——一个集成
   ],
   "explanation": "简要说明做了什么修改"
 }
-\`\`\``;
+\`\`\`
 
-const MAX_TOOL_ITERATIONS = 5;
+## 执行计划模式
+
+当用户的需求涉及多个文件或复杂的重构时，请先输出一份简洁的执行计划（Markdown 格式），然后再执行具体操作。
+
+执行计划格式：
+### 📋 执行计划
+
+1. **修改 \`src/xxx.tsx\`** — 添加 XXX 功能
+2. **新建 \`src/yyy.ts\`** — 创建 YYY 工具函数
+3. **更新 \`package.json\`** — 添加依赖
+
+### 影响范围
+- 需要修改 N 个文件
+- 不影响现有 API
+
+---
+
+然后紧接着执行具体的文件读取/修改操作。
+
+## GitHub 远程仓库操作
+
+当用户需要直接操作 GitHub 远程仓库时（无需克隆到本地），使用 \`github_*\` 系列工具：
+
+1. **探索远程仓库** — 用 \`github_list_repo\` 浏览目录，用 \`github_read_file\` 读取文件内容
+2. **创建工作分支** — 用 \`github_create_branch\` 从 main/master 创建新分支
+3. **编辑文件** — 先用 \`github_read_file\` 读取文件（获取 sha），再用 \`github_write_file\` 更新（更新已有文件时必须传 sha）
+4. **提交 PR** — 用 \`github_create_pr\` 创建 Pull Request
+
+> **注意**: 使用 GitHub API 工具需要在环境变量中配置 GITHUB_TOKEN 或 GITHUB_PAT。`;
+
+const MAX_TOOL_ITERATIONS = 8;
 
 function sseEvent(sse: SSEWriter, data: Record<string, unknown>): void {
   sse.send(data);
@@ -129,6 +264,18 @@ function buildToolSummary(toolName: string, args: Record<string, unknown>, resul
     }
     case 'git_status':
       return '获取了 git 状态';
+    case 'write_file':
+      return `已写入文件: ${args.path}`;
+    case 'github_read_file':
+      return `读取 GitHub 文件: ${args.owner}/${args.repo}/${args.path}`;
+    case 'github_write_file':
+      return `写入 GitHub 文件: ${args.owner}/${args.repo}/${args.path}`;
+    case 'github_list_repo':
+      return `浏览 GitHub 仓库: ${args.owner}/${args.repo}/${args.path || ''}`;
+    case 'github_create_branch':
+      return `创建 GitHub 分支: ${args.branch_name}`;
+    case 'github_create_pr':
+      return `创建 Pull Request: ${args.title}`;
     default:
       return `执行了工具 ${toolName}`;
   }

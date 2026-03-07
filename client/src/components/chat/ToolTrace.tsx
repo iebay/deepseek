@@ -19,6 +19,12 @@ function toolIcon(tool: string): string {
     case 'search_code': return '🔍';
     case 'list_directory': return '📂';
     case 'git_status': return '🌿';
+    case 'write_file': return '✏️';
+    case 'github_read_file': return '📥';
+    case 'github_write_file': return '📤';
+    case 'github_list_repo': return '📋';
+    case 'github_create_branch': return '🌿';
+    case 'github_create_pr': return '🔀';
     default: return '🔧';
   }
 }
