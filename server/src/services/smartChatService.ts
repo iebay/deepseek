@@ -4,7 +4,7 @@ import { runTool } from '../agent/toolRunner';
 import { loadProjectMemory } from './memoryService';
 import type { ChatMessage, ProjectContext } from './deepseekService';
 import { supportsToolCalling } from '../constants/models';
-import { sanitizeContent } from '../utils/sanitize';
+import { StreamSanitizer } from '../utils/sanitize';
 import { SSEWriter } from '../utils/sse';
 import { buildContextWithBudget, truncateResult } from '../utils/contextBudget';
 import { getOpenAIClient } from './openaiClient';
@@ -195,16 +195,19 @@ export async function streamSmartChat(
         stream_options: { include_usage: true },
       });
 
+      const sanitizer = new StreamSanitizer();
       for await (const chunk of directStream) {
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) {
-          const clean = sanitizeContent(delta);
+          const clean = sanitizer.process(delta);
           if (clean) sseEvent(sse, { type: 'content', content: clean });
         }
         if (chunk.usage) {
           sseEvent(sse, { type: 'usage', usage: chunk.usage, model });
         }
       }
+      const remaining = sanitizer.flush();
+      if (remaining) sseEvent(sse, { type: 'content', content: remaining });
 
       sse.done();
       return;
@@ -236,16 +239,19 @@ export async function streamSmartChat(
           stream_options: { include_usage: true },
         });
 
+        const sanitizer = new StreamSanitizer();
         for await (const chunk of finalStream) {
           const delta = chunk.choices[0]?.delta?.content;
           if (delta) {
-            const clean = sanitizeContent(delta);
+            const clean = sanitizer.process(delta);
             if (clean) sseEvent(sse, { type: 'content', content: clean });
           }
           if (chunk.usage) {
             sseEvent(sse, { type: 'usage', usage: chunk.usage, model });
           }
         }
+        const remaining = sanitizer.flush();
+        if (remaining) sseEvent(sse, { type: 'content', content: remaining });
 
         sse.done();
         return;
@@ -296,16 +302,19 @@ export async function streamSmartChat(
       stream_options: { include_usage: true },
     });
 
+    const sanitizer = new StreamSanitizer();
     for await (const chunk of finalStream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) {
-        const clean = sanitizeContent(delta);
+        const clean = sanitizer.process(delta);
         if (clean) sseEvent(sse, { type: 'content', content: clean });
       }
       if (chunk.usage) {
         sseEvent(sse, { type: 'usage', usage: chunk.usage, model });
       }
     }
+    const remaining = sanitizer.flush();
+    if (remaining) sseEvent(sse, { type: 'content', content: remaining });
 
     sse.done();
   } catch (err: unknown) {

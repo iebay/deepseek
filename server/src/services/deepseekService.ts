@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import type { Response } from 'express';
 import { loadProjectMemory } from './memoryService';
-import { sanitizeContent } from '../utils/sanitize';
+import { StreamSanitizer } from '../utils/sanitize';
 import { SSEWriter } from '../utils/sse';
 import { buildContextWithBudget } from '../utils/contextBudget';
 import { getOpenAIClient } from './openaiClient';
@@ -147,10 +147,11 @@ export async function streamChat(
       stream_options: { include_usage: true },
     });
 
+    const sanitizer = new StreamSanitizer();
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) {
-        const clean = sanitizeContent(delta);
+        const clean = sanitizer.process(delta);
         if (clean) {
           sse.send({ content: clean });
         }
@@ -168,6 +169,8 @@ export async function streamChat(
         });
       }
     }
+    const remaining = sanitizer.flush();
+    if (remaining) sse.send({ content: remaining });
 
     sse.done();
   } catch (err: unknown) {

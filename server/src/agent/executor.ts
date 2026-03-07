@@ -5,7 +5,7 @@ import { AGENT_SYSTEM_PROMPT } from './prompts';
 import { runTool } from './toolRunner';
 import type { ChatMessage, ProjectContext } from '../services/deepseekService';
 import { supportsToolCalling } from '../constants/models';
-import { sanitizeContent } from '../utils/sanitize';
+import { sanitizeContent, StreamSanitizer } from '../utils/sanitize';
 import { SSEWriter } from '../utils/sse';
 import { buildContextWithBudget, truncateResult } from '../utils/contextBudget';
 import { getOpenAIClient } from '../services/openaiClient';
@@ -73,16 +73,19 @@ export async function runAgent(
         stream_options: { include_usage: true },
       });
 
+      const sanitizer = new StreamSanitizer();
       for await (const chunk of directStream) {
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) {
-          const clean = sanitizeContent(delta);
+          const clean = sanitizer.process(delta);
           if (clean) sseWrite(sse, 'content', { content: clean });
         }
         if (chunk.usage) {
           sseWrite(sse, 'usage', { usage: chunk.usage, model });
         }
       }
+      const remaining = sanitizer.flush();
+      if (remaining) sseWrite(sse, 'content', { content: remaining });
 
       sseWrite(sse, 'done', { iterations: 0 });
       sse.done();
