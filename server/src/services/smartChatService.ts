@@ -83,6 +83,7 @@ const SMART_CHAT_BASE_PROMPT = `你是 DeepSeek Code AI 助手——一个集成
 - **主动发现问题**: 如果你发现代码中有 bug、安全隐患或性能问题，主动指出。
 - **遵循项目现有的代码风格和规范**。
 - **使用中文回答**。
+- **绝对不要在回复中输出 XML 标签**。禁止输出 \`<function_calls>\`、\`<invoke>\`、\`<parameter>\`、\`<DSML>\` 等任何 XML/HTML 标签。如果你需要调用工具，请使用 API 提供的 tool_call 机制，不要在文本中模拟。
 
 ## 文件修改格式
 
