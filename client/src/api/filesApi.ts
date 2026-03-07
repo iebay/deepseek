@@ -2,6 +2,26 @@ import type { FileNode } from '../types';
 
 const BASE = '/api/files';
 
+export interface SearchMatch {
+  line: number;
+  column: number;
+  text: string;
+  matchStart: number;
+  matchEnd: number;
+}
+
+export interface SearchResult {
+  filePath: string;
+  relativePath: string;
+  matches: SearchMatch[];
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  totalMatches: number;
+  filesSearched: number;
+}
+
 export async function fetchFileTree(root: string): Promise<FileNode> {
   const res = await fetch(`${BASE}/tree?root=${encodeURIComponent(root)}`);
   if (!res.ok) {
@@ -134,3 +154,41 @@ export async function deleteFile(filePath: string): Promise<void> {
     throw new Error(err.error || '删除失败');
   }
 }
+
+export async function searchFiles(
+  root: string,
+  query: string,
+  options?: {
+    caseSensitive?: boolean;
+    useRegex?: boolean;
+    includePattern?: string;
+    excludePattern?: string;
+  }
+): Promise<SearchResponse> {
+  const res = await fetch(`${BASE}/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, query, ...options }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '搜索失败');
+  }
+  return res.json();
+}
+
+export async function replaceInFiles(
+  replacements: { filePath: string; searchText: string; replaceWith: string; useRegex?: boolean; caseSensitive?: boolean }[]
+): Promise<{ replacedCount: number; filesModified: number }> {
+  const res = await fetch(`${BASE}/replace`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ replacements }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || '替换失败');
+  }
+  return res.json();
+}
+

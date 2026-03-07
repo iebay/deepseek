@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProjectSelector from './components/home/ProjectSelector';
 import TopBar from './components/layout/TopBar';
 import FileTree from './components/fileTree/FileTree';
+import SearchPanel from './components/search/SearchPanel';
 import CodeEditor from './components/editor/CodeEditor';
 import UnifiedAIPanel from './components/ai/UnifiedAIPanel';
 import GitPanel from './components/git/GitPanel';
@@ -56,6 +57,7 @@ function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number)
 function EditorLayout() {
   const {
     showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal,
+    showSearchPanel, toggleSearchPanel,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
@@ -82,10 +84,17 @@ function EditorLayout() {
         e.preventDefault();
         toggleSidebar();
       }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        toggleSearchPanel();
+      }
+      if (e.key === 'Escape' && showSearchPanel) {
+        toggleSearchPanel();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [toggleSidebar]);
+  }, [toggleSidebar, toggleSearchPanel, showSearchPanel]);
 
   const handleSidebarResize = useCallback((delta: number) => {
     setSidebarWidth(Math.max(160, Math.min(480, sidebarWidth + delta)));
@@ -100,7 +109,7 @@ function EditorLayout() {
       <OfflineIndicator />
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: File Tree */}
+        {/* Left: File Tree / Search Panel */}
         {showSidebar && (
           <>
             <aside
@@ -108,7 +117,21 @@ function EditorLayout() {
               style={{ width: sidebarWidth }}
             >
               <ErrorBoundary>
-                <FileTree />
+                {showSearchPanel ? <SearchPanel /> : <FileTree />}
+              </ErrorBoundary>
+            </aside>
+            <ResizeDivider onResize={handleSidebarResize} />
+          </>
+        )}
+        {/* Search panel when sidebar is hidden */}
+        {!showSidebar && showSearchPanel && (
+          <>
+            <aside
+              className="shrink-0 border-r border-[#30363d] bg-[#0d1117] overflow-hidden transition-all duration-200"
+              style={{ width: sidebarWidth }}
+            >
+              <ErrorBoundary>
+                <SearchPanel />
               </ErrorBoundary>
             </aside>
             <ResizeDivider onResize={handleSidebarResize} />

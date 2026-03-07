@@ -1,4 +1,4 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot } from 'lucide-react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
@@ -14,6 +14,7 @@ export default function TopBar() {
     toggleAIPanel, showAIPanel,
     toggleGitPanel, showGitPanel,
     toggleTerminal, showTerminal,
+    toggleSearchPanel, showSearchPanel,
     aiMode, activateAgentMode,
   } = useAppStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -92,10 +93,17 @@ export default function TopBar() {
         <div className="flex items-center gap-0.5">
           <button
             onClick={toggleSidebar}
-            className={`p-1.5 rounded-lg transition-colors text-xs ${showSidebar ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+            className={`p-1.5 rounded-lg transition-colors text-xs ${showSidebar && !showSearchPanel ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
             title={`${showSidebar ? '隐藏' : '显示'}文件树 (Ctrl+B)`}
           >
             <PanelLeft size={15} />
+          </button>
+          <button
+            onClick={toggleSearchPanel}
+            className={`p-1.5 rounded-lg transition-colors ${showSearchPanel ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+            title="全局搜索 (Ctrl+Shift+F)"
+          >
+            <Search size={15} />
           </button>
           <button
             onClick={togglePreview}
