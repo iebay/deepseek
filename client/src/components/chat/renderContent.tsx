@@ -129,7 +129,11 @@ export function renderContent(
   // Step 4: split on placeholders, render markdown segments and inject ConfirmCards
   const parts: React.ReactNode[] = [];
   // The split regex captures the numeric suffix so odd-indexed elements are the card numbers
+ copilot/refactor-ai-assistant-responses
   const segments = processed.split(new RegExp(`${PLACEHOLDER_PREFIX}(\\d+)`));
+
+  const segments = processed.split(new RegExp(`${PLACEHOLDER_PREFIX}(\d+)`));
+ main
 
   for (let i = 0; i < segments.length; i++) {
     if (i % 2 === 0) {
