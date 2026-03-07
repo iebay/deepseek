@@ -1,4 +1,4 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search } from 'lucide-react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search, Undo2, Redo2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
@@ -17,6 +17,7 @@ export default function TopBar() {
     toggleSearchPanel, showSearchPanel,
     aiMode, activateAgentMode,
     currentBranch,
+    canUndo, canRedo, undo, redo,
   } = useAppStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -31,6 +32,27 @@ export default function TopBar() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // Undo/Redo keyboard shortcuts (only when Monaco editor is not focused)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      if (target.closest('.monaco-editor')) return;
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) void undo();
+      }
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        ((e.shiftKey && e.key === 'Z') || e.key.toLowerCase() === 'y')
+      ) {
+        e.preventDefault();
+        if (canRedo) void redo();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, undo, redo]);
 
   function handleFullscreen() {
     if (!document.fullscreenElement) {
@@ -100,6 +122,28 @@ export default function TopBar() {
           >
             {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
+        </div>
+
+        <div className="h-4 w-px bg-[#30363d] mx-1" />
+
+        {/* Undo/Redo */}
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => void undo()}
+            disabled={!canUndo}
+            className={`p-1.5 rounded-lg transition-colors ${canUndo ? 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]' : 'text-[#30363d] cursor-not-allowed'}`}
+            title="撤销 (Ctrl+Z)"
+          >
+            <Undo2 size={15} />
+          </button>
+          <button
+            onClick={() => void redo()}
+            disabled={!canRedo}
+            className={`p-1.5 rounded-lg transition-colors ${canRedo ? 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]' : 'text-[#30363d] cursor-not-allowed'}`}
+            title="重做 (Ctrl+Shift+Z)"
+          >
+            <Redo2 size={15} />
+          </button>
         </div>
 
         <div className="h-4 w-px bg-[#30363d] mx-1" />

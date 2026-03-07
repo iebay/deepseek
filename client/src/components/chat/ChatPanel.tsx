@@ -275,7 +275,7 @@ export default function ChatPanel() {
     chatMessages, addChatMessage, updateLastAssistantMessage,
     clearChat, isAiLoading, setAiLoading, selectedModel,
     currentProject, fileTree, activeTabPath, openTabs,
-    showToast,
+    showToast, pushOperation,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -418,7 +418,27 @@ export default function ChatPanel() {
       return;
     }
     try {
+      // Read current content for undo support
+      let oldContent: string | null = null;
+      try {
+        oldContent = await fetchFileContent(file.path);
+      } catch {
+        oldContent = null; // File doesn't exist yet (new file)
+      }
+
       await batchWriteFiles([file], currentProject.path);
+
+      // Record in history
+      pushOperation({
+        type: 'apply',
+        description: `应用 AI 修改: ${file.path.split('/').pop()}`,
+        changes: [{
+          filePath: file.path,
+          oldContent,
+          newContent: file.content,
+        }],
+      });
+
       setAppliedFiles(prev => new Set([...prev, file.path]));
       showToast(`✓ 已应用 ${file.path.split('/').pop()}`, 'success');
     } catch (e) {
@@ -439,7 +459,26 @@ export default function ChatPanel() {
       return;
     }
     try {
+      // Read current content for all files before applying (for undo support)
+      const changes = await Promise.all(parsed.files.map(async (file) => {
+        let oldContent: string | null = null;
+        try {
+          oldContent = await fetchFileContent(file.path);
+        } catch {
+          oldContent = null;
+        }
+        return { filePath: file.path, oldContent, newContent: file.content };
+      }));
+
       await batchWriteFiles(parsed.files, currentProject.path);
+
+      // Record all file changes as a single operation
+      pushOperation({
+        type: 'apply',
+        description: `应用 AI 修改: ${parsed.files.length} 个文件`,
+        changes,
+      });
+
       setAppliedFiles(new Set(parsed.files.map(f => f.path)));
       showToast(`✓ 已应用 ${parsed.files.length} 个文件修改`, 'success');
     } catch (e) {
