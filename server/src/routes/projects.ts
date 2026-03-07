@@ -195,12 +195,12 @@ router.post('/open', (req: Request, res: Response) => {
   }
 
   if (!fs.existsSync(projPath)) {
-    return res.status(404).json({ error: '路径不存在' });
+    return res.status(404).json({ error: 'Path does not exist' });
   }
 
   const stat = fs.statSync(projPath);
   if (!stat.isDirectory()) {
-    return res.status(400).json({ error: '路径必须是目录' });
+    return res.status(400).json({ error: 'Path must be a directory' });
   }
 
   const metadata = readMetadata();
