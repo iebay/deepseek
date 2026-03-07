@@ -1,5 +1,5 @@
 export const MODELS = [
-  { value: 'deepseek-chat', label: 'DeepSeek V4 (最新旗舰)' },
+  { value: 'deepseek-chat', label: 'DeepSeek V3.2 (最新旗舰)' },
   { value: 'deepseek-reasoner', label: 'DeepSeek R1 (深度推理)' },
 ];
 
