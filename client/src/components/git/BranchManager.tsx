@@ -409,7 +409,7 @@ export default function BranchManager({ root, onBranchChange }: BranchManagerPro
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="text-xs bg-[#da3633] hover:bg-[#f85149] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs bg-[#da3633] hover:bg-[var(--error)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 {isDeleting ? '删除中...' : '删除'}
               </button>

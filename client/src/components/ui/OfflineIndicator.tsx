@@ -18,7 +18,7 @@ export default function OfflineIndicator() {
   if (isOnline) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-[#d29922] text-[#0d1117] text-xs font-medium shrink-0">
+    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--warning)] text-[var(--bg-primary)] text-xs font-medium shrink-0">
       <WifiOff size={13} />
       <span>网络已断开 — 部分功能不可用</span>
     </div>

@@ -201,7 +201,7 @@ export default function ProjectSelector() {
             onClick={() => { setTab('open'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'open'
-                ? 'bg-[#388bfd] text-white shadow-lg shadow-[var(--accent-primary)]/20'
+                ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -212,7 +212,7 @@ export default function ProjectSelector() {
             onClick={() => { setTab('clone'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'clone'
-                ? 'bg-[#388bfd] text-white shadow-lg shadow-[var(--accent-primary)]/20'
+                ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -223,7 +223,7 @@ export default function ProjectSelector() {
             onClick={() => { setTab('new'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === 'new'
-                ? 'bg-[#388bfd] text-white shadow-lg shadow-[var(--accent-primary)]/20'
+                ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/20'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -249,7 +249,7 @@ export default function ProjectSelector() {
                 <button
                   onClick={() => handleOpen()}
                   disabled={loading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#388bfd] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <FolderOpen size={16} />}
                   打开

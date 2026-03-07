@@ -111,7 +111,7 @@ export default function CreateProjectModal({ template, onClose, onCreated }: Cre
           <button
             onClick={handleCreate}
             disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#388bfd] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors"
           >
             {loading ? (
               <><Loader2 size={14} className="animate-spin" /> 创建中...</>

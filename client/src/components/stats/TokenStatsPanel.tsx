@@ -72,7 +72,7 @@ export default function TokenStatsPanel({ onClose }: Props) {
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${
                 period === p.value
-                  ? 'bg-[#388bfd] text-white'
+                  ? 'bg-[var(--accent-primary)] text-white'
                   : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
               }`}
             >
@@ -146,7 +146,7 @@ export default function TokenStatsPanel({ onClose }: Props) {
                         </div>
                         <div className="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#388bfd] rounded-full transition-all"
+                            className="h-full bg-[var(--accent-primary)] rounded-full transition-all"
                             style={{ width: `${m.percentage}%` }}
                           />
                         </div>

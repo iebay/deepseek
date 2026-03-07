@@ -286,7 +286,7 @@ export default function NpmPanel() {
                     {showOutdated ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                     <AlertTriangle size={12} />
                     可升级
-                    <span className="ml-1 text-[10px] bg-[#d29922]/20 text-[var(--warning)] px-1.5 py-0.5 rounded-full">
+                    <span className="ml-1 text-[10px] bg-[var(--warning-bg)] text-[var(--warning)] px-1.5 py-0.5 rounded-full">
                       {outdated.length}
                     </span>
                   </button>
@@ -348,7 +348,7 @@ export default function NpmPanel() {
               </button>
               <button
                 onClick={() => void handleUninstall(confirmUninstall)}
-                className="px-3 py-1.5 text-xs bg-[#da3633] hover:bg-[#f85149] text-white rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs bg-[#da3633] hover:bg-[var(--error)] text-white rounded-lg transition-colors"
               >
                 卸载
               </button>

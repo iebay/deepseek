@@ -134,9 +134,9 @@ function renderInline(text: string): React.ReactNode {
 function TypingDots() {
   return (
     <div className="flex items-center gap-1 py-1">
-      <span className="w-1.5 h-1.5 bg-[#388bfd] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <span className="w-1.5 h-1.5 bg-[#388bfd] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <span className="w-1.5 h-1.5 bg-[#388bfd] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+      <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+      <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
     </div>
   );
 }
@@ -648,7 +648,7 @@ export default function ChatPanel() {
           <button
             onClick={() => handleSend()}
             disabled={(!input.trim() && images.length === 0) || isAiLoading}
-            className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#388bfd] hover:bg-[var(--accent-hover)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] text-white rounded-xl transition-colors"
+            className="shrink-0 w-9 h-9 flex items-center justify-center bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] text-white rounded-xl transition-colors"
           >
             <Send size={15} />
           </button>
@@ -686,7 +686,7 @@ export default function ChatPanel() {
                   setShowClearConfirm(false);
                   showToast('对话已清空', 'info');
                 }}
-                className="flex-1 py-2 bg-[#f85149] hover:bg-[#ff7b72] text-white text-xs rounded-lg transition-colors"
+                className="flex-1 py-2 bg-[var(--error)] hover:bg-[var(--error)]/80 text-white text-xs rounded-lg transition-colors"
               >
                 确认清空
               </button>

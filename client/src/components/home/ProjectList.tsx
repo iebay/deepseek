@@ -385,7 +385,7 @@ export default function ProjectList() {
             <button
               onClick={handleOpenByPath}
               disabled={openLoading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#388bfd] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
             >
               {openLoading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
               打开

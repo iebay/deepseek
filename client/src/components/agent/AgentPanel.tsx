@@ -222,7 +222,7 @@ export default function AgentPanel() {
         ))}
         {isRunning && (
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] px-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#388bfd] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-pulse" />
             Agent 正在执行...
           </div>
         )}
@@ -244,7 +244,7 @@ export default function AgentPanel() {
           {isRunning ? (
             <button
               onClick={handleStop}
-              className="p-2 rounded-lg bg-[var(--error-bg)] hover:bg-[#f85149]/20 text-[var(--error)] transition-colors shrink-0"
+              className="p-2 rounded-lg bg-[var(--error-bg)] hover:bg-[var(--error)]/20 text-[var(--error)] transition-colors shrink-0"
               title="停止"
             >
               <Square size={15} />

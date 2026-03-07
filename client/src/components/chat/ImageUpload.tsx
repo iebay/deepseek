@@ -55,7 +55,7 @@ export default function ImageUpload({ images, onChange }: ImageUploadProps) {
           />
           <button
             onClick={() => removeImage(i)}
-            className="absolute -top-1 -right-1 w-4 h-4 bg-[#f85149] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--error)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <X size={8} className="text-white" />
           </button>

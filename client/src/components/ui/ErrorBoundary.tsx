@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <p className="text-sm text-[var(--text-secondary)] mb-4">{this.state.error?.message}</p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="px-4 py-2 bg-[#388bfd] text-white rounded-lg text-sm"
+            className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg text-sm"
           >
             重试
           </button>

@@ -46,7 +46,7 @@ export default function TemplateGrid({ templates, loading, onSelect }: TemplateG
 
           {/* Hover overlay */}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[var(--bg-primary)]/60 backdrop-blur-[1px]">
-            <span className="text-xs font-semibold text-white bg-[#388bfd] px-3 py-1.5 rounded-lg shadow-lg">
+            <span className="text-xs font-semibold text-white bg-[var(--accent-primary)] px-3 py-1.5 rounded-lg shadow-lg">
               使用此模板
             </span>
           </div>

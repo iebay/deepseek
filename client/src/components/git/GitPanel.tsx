@@ -339,7 +339,7 @@ export default function GitPanel() {
                 <button
                   onClick={() => handleCommit(true)}
                   disabled={isCommitting || isPushing || gitStatus.changes.length === 0}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-[#388bfd] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-2 py-1.5 rounded-lg transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-2 py-1.5 rounded-lg transition-colors"
                 >
                   <Upload size={12} />
                   {isCommitting || isPushing ? '处理中...' : 'Commit & Push'}
@@ -352,7 +352,7 @@ export default function GitPanel() {
               <button
                 onClick={handlePush}
                 disabled={isPushing || !gitStatus.hasRemote}
-                className="w-full flex items-center justify-center gap-1.5 text-xs bg-[#388bfd] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 text-xs bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
                 title={!gitStatus.hasRemote ? '请先设置 Remote' : '推送到远端'}
               >
                 <Upload size={12} />
@@ -465,7 +465,7 @@ export default function GitPanel() {
               </button>
               <button
                 onClick={handleSetRemote}
-                className="text-xs bg-[#388bfd] hover:bg-[var(--accent-hover)] text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 确定
               </button>
