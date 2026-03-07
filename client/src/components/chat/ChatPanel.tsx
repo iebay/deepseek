@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, StopCircle, Brain } from 'lucide-react';
+import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, StopCircle, Brain, MessageSquare, Cpu } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { streamAIChat, streamSmartChat } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
@@ -11,6 +11,7 @@ import ChatHistory, { ChatHistoryButton } from './ChatHistory';
 import ToolTrace, { type ToolAction } from './ToolTrace';
 import { recordTokenUsage } from '../../api/statsApi';
 import { formatCost, formatTokens } from '../../utils/formatStats';
+import { MODELS } from '../../constants/models';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -306,6 +307,7 @@ export default function ChatPanel() {
     clearChat, isAiLoading, setAiLoading, selectedModel,
     currentProject, fileTree, activeTabPath, openTabs,
     showToast, pushOperation, smartMode, toggleSmartMode,
+    aiMode, setAiMode,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -731,49 +733,73 @@ export default function ChatPanel() {
       </div>
 
       {/* Input */}
-      <div className="px-3 py-2.5 border-t border-[var(--border-primary)] shrink-0">
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl focus-within:border-[var(--accent-primary)] transition-colors">
-            {images.length > 0 && (
-              <div className="px-3 pt-2">
-                <ImageUpload images={images} onChange={setImages} />
-              </div>
-            )}
-            <textarea
-              ref={textareaRef}
-              className="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] px-3 py-2.5 resize-none focus:outline-none min-h-[40px] max-h-[120px]"
-              style={{ height: '40px' }}
-              placeholder="描述你的需求..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              disabled={isAiLoading}
-            />
-            <div className="px-2 pb-1.5">
+      <div className="px-3 py-2 shrink-0">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl focus-within:border-[var(--accent-primary)] transition-colors">
+          {images.length > 0 && (
+            <div className="px-3 pt-2">
+              <ImageUpload images={images} onChange={setImages} />
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            className="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] px-3 py-2.5 resize-none focus:outline-none min-h-[40px] max-h-[120px]"
+            style={{ height: '40px' }}
+            placeholder="描述你的需求..."
+            title="Enter 发送 · Shift+Enter 换行"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={isAiLoading}
+          />
+          <div className="flex items-center justify-between px-2 pb-2">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setAiMode('chat')}
+                title="Chat 模式"
+                className={`p-1.5 rounded-lg transition-colors ${aiMode === 'chat' ? 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+              >
+                <MessageSquare size={14} />
+              </button>
+              <button
+                onClick={() => setAiMode('agent')}
+                title="Agent 模式"
+                className={`p-1.5 rounded-lg transition-colors ${aiMode === 'agent' ? 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+              >
+                <Cpu size={14} />
+              </button>
+              <button
+                onClick={toggleSmartMode}
+                title="智能模式"
+                className={`p-1.5 rounded-lg transition-colors ${smartMode ? 'text-[var(--accent-primary)] bg-[var(--accent-primary)]/10' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+              >
+                <Brain size={14} />
+              </button>
               <ImageUpload images={[]} onChange={(imgs) => setImages(prev => [...prev, ...imgs])} />
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-tertiary)]">
+                {MODELS.find(m => m.value === selectedModel)?.label}
+              </span>
+              <button
+                onClick={() => handleSend()}
+                disabled={(!input.trim() && images.length === 0) || isAiLoading}
+                className="shrink-0 w-7 h-7 flex items-center justify-center bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] text-white rounded-lg transition-colors"
+              >
+                <Send size={13} />
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => handleSend()}
-            disabled={(!input.trim() && images.length === 0) || isAiLoading}
-            className="shrink-0 w-9 h-9 flex items-center justify-center bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] text-white rounded-xl transition-colors"
-          >
-            <Send size={15} />
-          </button>
         </div>
-        <p className="text-[10px] text-[var(--text-tertiary)] mt-1.5">
-          Enter 发送 · Shift+Enter 换行
-          {lastUsage && (
-            <span className="ml-2 text-[var(--text-secondary)]">
-              · 上次: {formatTokens(lastUsage.tokens)} tokens · {formatCost(lastUsage.cost)}
-            </span>
-          )}
-        </p>
+        {lastUsage && (
+          <p className="text-[10px] text-[var(--text-tertiary)] mt-1 px-1">
+            上次: {formatTokens(lastUsage.tokens)} tokens · {formatCost(lastUsage.cost)}
+          </p>
+        )}
       </div>
 
       {/* Clear confirm dialog */}
