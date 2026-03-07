@@ -1,6 +1,7 @@
 import path from 'path';
 import os from 'os';
 import type { Response } from 'express';
+import { isAllowedFileExtension } from './ignorePatterns';
 
 export function getAllowedRoots(): string[] {
   const envRoots = process.env.ALLOWED_ROOT_PATHS || process.env.ALLOWED_ROOTS || '';
@@ -38,20 +39,7 @@ export function validateRootParam(root: string | undefined, res: Response): stri
 }
 
 export function isTextFile(filePath: string): boolean {
-  const textExtensions = new Set([
-    '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-    '.css', '.scss', '.sass', '.less',
-    '.html', '.htm', '.xml', '.svg',
-    '.json', '.jsonc', '.yaml', '.yml', '.toml', '.ini', '.env',
-    '.md', '.mdx', '.txt', '.rst',
-    '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.hpp',
-    '.sh', '.bash', '.zsh', '.fish',
-    '.prisma', '.graphql', '.gql',
-    '.vue', '.svelte',
-    '.lock', '.gitignore', '.gitattributes', '.editorconfig',
-  ]);
-  const ext = path.extname(filePath).toLowerCase();
-  return textExtensions.has(ext) || ext === '';
+  return isAllowedFileExtension(path.basename(filePath));
 }
 
 export function isFileSizeOk(sizeInBytes: number, maxMB = 2): boolean {

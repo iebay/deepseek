@@ -1,7 +1,3 @@
-import https from 'https';
-import http from 'http';
-import { URL } from 'url';
-
 const REQUEST_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_RESULTS = 5;
 
@@ -11,41 +7,23 @@ export interface SearchResult {
   snippet: string;
 }
 
-function httpsGet(urlStr: string, redirectsLeft = 5): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (redirectsLeft <= 0) {
-      reject(new Error('Too many redirects'));
-      return;
-    }
-    const parsed = new URL(urlStr);
-    const lib = parsed.protocol === 'https:' ? https : http;
-    const req = lib.get(
-      urlStr,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; DeepSeekAgent/1.0)',
-          Accept: 'text/html,application/json',
-        },
-        timeout: REQUEST_TIMEOUT_MS,
+async function fetchText(urlStr: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const resp = await fetch(urlStr, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; DeepSeekAgent/1.0)',
+        Accept: 'text/html,application/json',
       },
-      (res) => {
-        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          httpsGet(res.headers.location, redirectsLeft - 1).then(resolve).catch(reject);
-          res.resume();
-          return;
-        }
-        const chunks: Buffer[] = [];
-        res.on('data', (chunk: Buffer) => chunks.push(chunk));
-        res.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-        res.on('error', reject);
-      },
-    );
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Request timed out'));
+      redirect: 'follow',
     });
-    req.on('error', reject);
-  });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.text();
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function searchWithApi(
@@ -70,7 +48,7 @@ async function searchWithApi(
     headers['Ocp-Apim-Subscription-Key'] = apiKey;
   }
 
-  const raw = await httpsGet(url.toString());
+  const raw = await fetchText(url.toString());
   const data = JSON.parse(raw) as Record<string, unknown>;
 
   // Bing format
@@ -143,7 +121,7 @@ function parseDuckDuckGoHtml(html: string, maxResults: number): SearchResult[] {
 
 async function searchDuckDuckGo(query: string, maxResults: number): Promise<SearchResult[]> {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const html = await httpsGet(url);
+  const html = await fetchText(url);
   return parseDuckDuckGoHtml(html, maxResults);
 }
 

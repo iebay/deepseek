@@ -19,6 +19,20 @@ function githubHeaders(token: string): Record<string, string> {
   };
 }
 
+/** Returns the GitHub token or an error string if not configured. */
+function getGithubToken(): { token: string } | { error: string } {
+  const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
+  if (!token) return { error: '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量' };
+  return { token };
+}
+
+/** Removes token fragments from GitHub API error bodies to prevent leakage. */
+function sanitizeGithubError(body: string): string {
+  return body
+    .replace(/token\s+[a-zA-Z0-9_-]+/gi, 'token [REDACTED]')
+    .replace(/Bearer\s+[a-zA-Z0-9_.-]+/gi, 'Bearer [REDACTED]');
+}
+
 async function createGithubBranch(
   owner: string,
   repo: string,
@@ -95,10 +109,16 @@ export async function runTool(
         const content = args.content as string;
         if (!filePath) return '错误: 缺少 path 参数';
         if (content === undefined || content === null) return '错误: 缺少 content 参数';
-        const absPath = path.isAbsolute(filePath)
-          ? filePath
-          : path.join(projectRoot, filePath);
+        // Reject absolute paths — write_file only accepts paths relative to projectRoot
+        if (path.isAbsolute(filePath)) return '错误: write_file 只接受相对路径';
+        // Reject path traversal attempts
+        if (filePath.includes('..')) return '错误: 路径不能包含 ..';
+        const absPath = path.join(projectRoot, filePath);
         const normalised = path.resolve(absPath);
+        // Defense-in-depth: ensure the resolved path stays inside projectRoot
+        if (!normalised.startsWith(path.resolve(projectRoot) + path.sep) && normalised !== path.resolve(projectRoot)) {
+          return '错误: 文件路径不在允许的目录范围内';
+        }
         const allowedRoots = getAllowedRoots();
         if (!isPathSafe(normalised, allowedRoots)) {
           return '错误: 文件路径不在允许的目录范围内';
@@ -426,8 +446,9 @@ export async function runTool(
       // ── GitHub API remote tools ────────────────────────────────────────────
 
       case 'github_read_file': {
-        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
-        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const githubToken = getGithubToken();
+        if ('error' in githubToken) return githubToken.error;
+        const { token } = githubToken;
         const owner = args.owner as string;
         const repo = args.repo as string;
         const filePath = args.path as string;
@@ -437,7 +458,7 @@ export async function runTool(
         const resp = await fetch(url, { headers: githubHeaders(token) });
         if (!resp.ok) {
           const body = await resp.text();
-          return `GitHub API 错误 (${resp.status}): ${body}`;
+          return `GitHub API 错误 (${resp.status}): ${sanitizeGithubError(body)}`;
         }
         const data = await resp.json() as { content?: string; encoding?: string; name?: string };
         if (data.encoding !== 'base64' || !data.content) {
@@ -448,8 +469,9 @@ export async function runTool(
       }
 
       case 'github_write_file': {
-        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
-        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const githubToken = getGithubToken();
+        if ('error' in githubToken) return githubToken.error;
+        const { token } = githubToken;
         const owner = args.owner as string;
         const repo = args.repo as string;
         const filePath = args.path as string;
@@ -472,15 +494,16 @@ export async function runTool(
         });
         if (!resp.ok) {
           const errBody = await resp.text();
-          return `GitHub API 错误 (${resp.status}): ${errBody}`;
+          return `GitHub API 错误 (${resp.status}): ${sanitizeGithubError(errBody)}`;
         }
         const result = await resp.json() as { commit?: { sha?: string } };
         return `文件已成功写入 GitHub: ${filePath}，commit SHA: ${result.commit?.sha ?? '未知'}`;
       }
 
       case 'github_list_repo': {
-        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
-        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const githubToken = getGithubToken();
+        if ('error' in githubToken) return githubToken.error;
+        const { token } = githubToken;
         const owner = args.owner as string;
         const repo = args.repo as string;
         if (!owner || !repo) return '错误: 缺少必要参数 owner 或 repo';
@@ -490,7 +513,7 @@ export async function runTool(
         const resp = await fetch(url, { headers: githubHeaders(token) });
         if (!resp.ok) {
           const body = await resp.text();
-          return `GitHub API 错误 (${resp.status}): ${body}`;
+          return `GitHub API 错误 (${resp.status}): ${sanitizeGithubError(body)}`;
         }
         const data = await resp.json() as Array<{ name: string; type: string; size?: number; path: string }>;
         if (!Array.isArray(data)) return '错误: 返回内容不是目录列表，可能是文件';
@@ -499,8 +522,9 @@ export async function runTool(
       }
 
       case 'github_create_branch': {
-        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
-        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const githubToken = getGithubToken();
+        if ('error' in githubToken) return githubToken.error;
+        const { token } = githubToken;
         const owner = args.owner as string;
         const repo = args.repo as string;
         const branchName = args.branch_name as string;
@@ -516,7 +540,7 @@ export async function runTool(
             const masterResp = await fetch(masterUrl, { headers: githubHeaders(token) });
             if (!masterResp.ok) {
               const body = await masterResp.text();
-              return `GitHub API 错误: 无法获取源分支 SHA (${masterResp.status}): ${body}`;
+              return `GitHub API 错误: 无法获取源分支 SHA (${masterResp.status}): ${sanitizeGithubError(body)}`;
             }
             const masterData = await masterResp.json() as { object?: { sha?: string } };
             const sha = masterData.object?.sha;
@@ -524,7 +548,7 @@ export async function runTool(
             return createGithubBranch(owner, repo, branchName, sha, token);
           }
           const body = await refResp.text();
-          return `GitHub API 错误 (${refResp.status}): ${body}`;
+          return `GitHub API 错误 (${refResp.status}): ${sanitizeGithubError(body)}`;
         }
         const refData = await refResp.json() as { object?: { sha?: string } };
         const sha = refData.object?.sha;
@@ -533,8 +557,9 @@ export async function runTool(
       }
 
       case 'github_create_pr': {
-        const token = process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT ?? '';
-        if (!token) return '错误: 未配置 GITHUB_TOKEN 或 GITHUB_PAT 环境变量';
+        const githubToken = getGithubToken();
+        if ('error' in githubToken) return githubToken.error;
+        const { token } = githubToken;
         const owner = args.owner as string;
         const repo = args.repo as string;
         const title = args.title as string;
@@ -550,7 +575,7 @@ export async function runTool(
         });
         if (!resp.ok) {
           const errBody = await resp.text();
-          return `GitHub API 错误 (${resp.status}): ${errBody}`;
+          return `GitHub API 错误 (${resp.status}): ${sanitizeGithubError(errBody)}`;
         }
         const pr = await resp.json() as { html_url?: string; number?: number };
         return `Pull Request 已创建: #${pr.number} — ${pr.html_url}`;

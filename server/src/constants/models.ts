@@ -1,3 +1,4 @@
+// SYNC: Keep in sync with client/src/constants/models.ts
 export const ALLOWED_MODELS = [
   'deepseek-chat',       // V3.2 最新旗舰
   'deepseek-reasoner',   // R1 深度推理

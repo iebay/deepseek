@@ -22,9 +22,6 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-# Install runtime build tools for native modules
-RUN apk add --no-cache python3 make g++
-
 # Copy server production dependencies
 COPY server/package*.json ./server/
 WORKDIR /app/server
@@ -33,6 +30,7 @@ RUN npm ci --omit=dev
 WORKDIR /app
 # Copy built server
 COPY --from=server-build /app/server/dist ./server/dist
+# Copy compiled native modules (e.g. node-pty) from build stage instead of rebuilding
 COPY --from=server-build /app/server/node_modules ./server/node_modules
 
 # Copy built client (served as static files)
