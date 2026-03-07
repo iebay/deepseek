@@ -1,6 +1,6 @@
 import React from 'react';
 import CodeBlock from './CodeBlock';
-import DiffCard from './DiffCard';
+import ConfirmCard from './ConfirmCard';
 
 interface ParsedAIResponse {
   files?: { path: string; content: string }[];
@@ -84,13 +84,14 @@ export function renderContent(
         if (parsed.files && Array.isArray(parsed.files) && parsed.files.length > 0) {
           const allApplied = parsed.files.every(f => appliedFiles.has(f.path));
           parts.push(
-            <DiffCard
-              key={`diff-${partIndex++}`}
+            <ConfirmCard
+              key={`confirm-${partIndex++}`}
               files={parsed.files}
               appliedFiles={appliedFiles}
               onApplyFile={onApplyFile}
               onApplyAll={onApplyAll}
               allApplied={allApplied}
+              explanation={parsed.explanation}
             />
           );
           lastIndex = match.index + match[0].length;
