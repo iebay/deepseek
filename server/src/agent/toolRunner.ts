@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import { readFile, writeFile, getFileTree } from '../services/fileService';
 import { isPathSafe, getAllowedRoots } from '../utils/pathUtils';
@@ -82,6 +82,10 @@ export async function runTool(
         const absPath = path.isAbsolute(filePath)
           ? filePath
           : path.join(projectRoot, filePath);
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(absPath, allowedRoots)) {
+          return '错误: 文件路径不在允许的目录范围内';
+        }
         const content = readFile(absPath);
         return truncate(content);
       }
@@ -95,6 +99,10 @@ export async function runTool(
           ? filePath
           : path.join(projectRoot, filePath);
         const normalised = path.resolve(absPath);
+        const allowedRoots = getAllowedRoots();
+        if (!isPathSafe(normalised, allowedRoots)) {
+          return '错误: 文件路径不在允许的目录范围内';
+        }
         if (
           normalised.includes(`${path.sep}node_modules${path.sep}`) ||
           normalised.includes(`${path.sep}.git${path.sep}`) ||
@@ -181,7 +189,8 @@ export async function runTool(
           return '错误: 工作目录不在允许的目录范围内';
         }
         try {
-          const result = execSync(command, {
+          const [cmd, ...cmdArgs] = command.split(/\s+/);
+          const result = execFileSync(cmd, cmdArgs, {
             cwd,
             encoding: 'utf-8',
             timeout: 30000,

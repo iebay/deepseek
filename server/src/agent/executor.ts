@@ -58,7 +58,10 @@ export async function runAgent(
     { role: 'system', content: systemContent },
     ...userMessages.map(m => {
       if (m.role === 'user' && Array.isArray(m.content)) {
-        return { role: 'user', content: m.content } as OpenAI.Chat.ChatCompletionMessageParam;
+        const textOnly = (m.content as Array<{ type: string; text?: string }>)
+          .filter(part => part.type === 'text')
+          .map(part => ({ type: 'text' as const, text: part.text ?? '' }));
+        return { role: 'user', content: textOnly } as OpenAI.Chat.ChatCompletionMessageParam;
       }
       return { role: m.role, content: m.content as string } as OpenAI.Chat.ChatCompletionMessageParam;
     }),
@@ -100,8 +103,9 @@ export async function runAgent(
       messages.push({
         role: 'assistant',
         content: assistantMessage.content,
+        reasoning_content: (assistantMessage as any).reasoning_content ?? undefined,
         tool_calls: assistantMessage.tool_calls,
-      });
+      } as OpenAI.Chat.ChatCompletionMessageParam);
 
       for (const toolCall of assistantMessage.tool_calls) {
         const toolName = toolCall.function.name;
