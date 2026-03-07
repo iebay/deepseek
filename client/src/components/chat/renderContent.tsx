@@ -126,14 +126,10 @@ export function renderContent(
     return [renderMarkdown(processed, 0)];
   }
 
-  // Step 4: split on placeholders, render markdown segments and inject ConfirmCards
+   // Step 4: split on placeholders, render markdown segments and inject ConfirmCards
   const parts: React.ReactNode[] = [];
   // The split regex captures the numeric suffix so odd-indexed elements are the card numbers
- copilot/refactor-ai-assistant-responses
-  const segments = processed.split(new RegExp(`${PLACEHOLDER_PREFIX}(\\d+)`));
-
-  const segments = processed.split(new RegExp(`${PLACEHOLDER_PREFIX}(\d+)`));
- main
+  const segments = processed.split(new RegExp(`${PLACEHOLDER_PREFIX}(\\d+)`)); // 只保留一个 segments 声明，并删除多余或未定义的代码行
 
   for (let i = 0; i < segments.length; i++) {
     if (i % 2 === 0) {
