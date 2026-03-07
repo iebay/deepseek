@@ -13,6 +13,7 @@ import memoryRouter from './routes/memory';
 import uploadRouter from './routes/upload';
 import agentRouter from './routes/agent';
 import projectsRouter from './routes/projects';
+import npmRouter from './routes/npm';
 import { handleTerminalUpgrade } from './routes/terminal';
 import { analyzeProject } from './services/projectAnalyzer';
 import { getAllowedRoots, isPathSafe } from './utils/pathUtils';
@@ -64,6 +65,7 @@ app.use('/api/memory', memoryRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/agent', agentRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/npm', npmRouter);
 
 app.post('/api/project/analyze', (req, res) => {
   const { root } = req.body as { root: string };

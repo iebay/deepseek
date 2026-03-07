@@ -13,6 +13,7 @@ import Toast from './components/ui/Toast';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import OfflineIndicator from './components/ui/OfflineIndicator';
 import Terminal from './components/terminal/Terminal';
+import NpmPanel from './components/npm/NpmPanel';
 import { useAppStore } from './store/appStore';
 
 function ResizeDivider({ onResize, className = '' }: { onResize: (delta: number) => void; className?: string }) {
@@ -59,6 +60,7 @@ function EditorLayout() {
   const {
     showPreview, showSidebar, showAIPanel, showGitPanel, showTerminal,
     showSearchPanel, toggleSearchPanel,
+    showNpmPanel,
     sidebarWidth, aiPanelWidth,
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
@@ -188,6 +190,21 @@ function EditorLayout() {
             >
               <ErrorBoundary>
                 <GitPanel />
+              </ErrorBoundary>
+            </aside>
+          </>
+        )}
+
+        {/* Right: npm Panel */}
+        {showNpmPanel && (
+          <>
+            <ResizeDivider onResize={handleAIPanelResize} />
+            <aside
+              className="shrink-0 border-l border-[#30363d] overflow-hidden relative transition-all duration-200"
+              style={{ width: aiPanelWidth }}
+            >
+              <ErrorBoundary>
+                <NpmPanel />
               </ErrorBoundary>
             </aside>
           </>

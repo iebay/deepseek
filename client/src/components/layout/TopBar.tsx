@@ -1,4 +1,4 @@
-import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search, Undo2, Redo2 } from 'lucide-react';
+import { Cpu, Home, Eye, PanelLeft, PanelRight, Github, Maximize2, Minimize2, GitBranch, TerminalSquare, CommandIcon, Bot, Search, Undo2, Redo2, Package } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
@@ -15,6 +15,7 @@ export default function TopBar() {
     toggleGitPanel, showGitPanel,
     toggleTerminal, showTerminal,
     toggleSearchPanel, showSearchPanel,
+    toggleNpmPanel, showNpmPanel,
     aiMode, activateAgentMode,
     currentBranch,
     canUndo, canRedo, undo, redo,
@@ -198,6 +199,13 @@ export default function TopBar() {
             title={`${showTerminal ? '隐藏' : '显示'}终端`}
           >
             <TerminalSquare size={15} />
+          </button>
+          <button
+            onClick={toggleNpmPanel}
+            className={`p-1.5 rounded-lg transition-colors ${showNpmPanel ? 'text-[#388bfd] bg-[#388bfd]/10' : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]'}`}
+            title={`${showNpmPanel ? '隐藏' : '显示'} npm 依赖管理`}
+          >
+            <Package size={15} />
           </button>
         </div>
 
