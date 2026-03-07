@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, StopCircle } from 'lucide-react';
+import { Send, Bot, User, Trash2, Copy, Check, Sparkles, AlertCircle, Download, StopCircle, Brain } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { streamAIChat } from '../../api/aiApi';
+import { streamAIChat, streamSmartChat } from '../../api/aiApi';
 import { batchWriteFiles, fetchFileContent } from '../../api/filesApi';
 import type { ChatMessage, MultimodalContentPart, FileNode } from '../../types';
 import SuggestionCards from './SuggestionCards';
 import DiffCard from './DiffCard';
 import ImageUpload, { type UploadedImage } from './ImageUpload';
 import ChatHistory, { ChatHistoryButton } from './ChatHistory';
+import ToolTrace, { type ToolAction } from './ToolTrace';
 import { recordTokenUsage } from '../../api/statsApi';
 import { formatCost, formatTokens } from '../../utils/formatStats';
 
@@ -176,11 +177,15 @@ function MessageBubble({
   onApplyFile,
   onApplyAll,
   appliedFiles,
+  toolActions,
+  isToolLoading,
 }: {
   msg: ChatMessage;
   onApplyFile?: (f: { path: string; content: string }) => Promise<void>;
   onApplyAll?: () => Promise<void>;
   appliedFiles?: Set<string>;
+  toolActions?: ToolAction[];
+  isToolLoading?: boolean;
 }) {
   const isUser = msg.role === 'user';
 
@@ -214,6 +219,9 @@ function MessageBubble({
         {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
       <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+        {!isUser && (toolActions || isToolLoading) && (
+          <ToolTrace actions={toolActions ?? []} isLoading={isToolLoading} />
+        )}
         <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[var(--accent-bg)] text-[var(--text-primary)] rounded-tr-sm' : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)] rounded-tl-sm'}`}>
           {isUser ? (
             renderUserContent()
@@ -285,7 +293,7 @@ export default function ChatPanel() {
     chatMessages, addChatMessage, updateLastAssistantMessage,
     clearChat, isAiLoading, setAiLoading, selectedModel,
     currentProject, fileTree, activeTabPath, openTabs,
-    showToast, pushOperation,
+    showToast, pushOperation, smartMode, toggleSmartMode,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -295,6 +303,10 @@ export default function ChatPanel() {
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set());
   const [lastUsage, setLastUsage] = useState<{ tokens: number; cost: number } | null>(null);
+  // Map from message index → tool actions for that assistant message
+  const [messageToolActions, setMessageToolActions] = useState<Map<number, ToolAction[]>>(new Map());
+  // Index of the currently-loading assistant message (for live tool trace)
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
@@ -370,6 +382,9 @@ export default function ChatPanel() {
     setAiLoading(true);
     setElapsed(0);
 
+    // The assistant message will be at index = chatMessages.length + 1 (user + assistant added above)
+    const assistantMsgIndex = chatMessages.length + 1;
+
     const activeTab = openTabs.find(t => t.path === activeTabPath);
 
     // Extract mentioned file paths from the user message and read their content.
@@ -403,35 +418,102 @@ export default function ChatPanel() {
 
     let fullContent = '';
 
-    abortRef.current = streamAIChat({
-      messages: [...chatMessages, userMsg],
-      context,
-      model: selectedModel,
-      onChunk: (chunk) => {
-        fullContent += chunk;
-        updateLastAssistantMessage(fullContent);
-      },
-      onDone: () => {
-        setAiLoading(false);
-        abortRef.current = null;
-      },
-      onError: (err) => {
-        updateLastAssistantMessage(`错误: ${err}`);
-        setAiLoading(false);
-        abortRef.current = null;
-      },
-      onUsage: (usage, model) => {
-        const { inputPrice, outputPrice } = getModelPrices(model);
-        const cost = (usage.prompt_tokens / 1000) * inputPrice + (usage.completion_tokens / 1000) * outputPrice;
-        setLastUsage({ tokens: usage.total_tokens, cost });
-        recordTokenUsage({
-          model,
-          promptTokens: usage.prompt_tokens,
-          completionTokens: usage.completion_tokens,
-          totalTokens: usage.total_tokens,
-        }).catch(() => { /* ignore */ });
-      },
-    });
+    // Use smart mode when enabled and projectRoot is available
+    const useSmartMode = smartMode && !!currentProject?.path;
+
+    if (useSmartMode) {
+      // Initialize live tool actions tracking for this assistant message
+      setLoadingMsgIndex(assistantMsgIndex);
+      setMessageToolActions(prev => {
+        const next = new Map(prev);
+        next.set(assistantMsgIndex, []);
+        return next;
+      });
+
+      abortRef.current = streamSmartChat({
+        messages: [...chatMessages, userMsg],
+        context,
+        model: selectedModel,
+        onChunk: (chunk) => {
+          fullContent += chunk;
+          updateLastAssistantMessage(fullContent);
+        },
+        onDone: () => {
+          setAiLoading(false);
+          setLoadingMsgIndex(null);
+          abortRef.current = null;
+        },
+        onError: (err) => {
+          updateLastAssistantMessage(`错误: ${err}`);
+          setAiLoading(false);
+          setLoadingMsgIndex(null);
+          abortRef.current = null;
+        },
+        onUsage: (usage, model) => {
+          const { inputPrice, outputPrice } = getModelPrices(model);
+          const cost = (usage.prompt_tokens / 1000) * inputPrice + (usage.completion_tokens / 1000) * outputPrice;
+          setLastUsage({ tokens: usage.total_tokens, cost });
+          recordTokenUsage({
+            model,
+            promptTokens: usage.prompt_tokens,
+            completionTokens: usage.completion_tokens,
+            totalTokens: usage.total_tokens,
+          }).catch(() => { /* ignore */ });
+        },
+        onToolCall: (event) => {
+          setMessageToolActions(prev => {
+            const next = new Map(prev);
+            const existing = next.get(assistantMsgIndex) ?? [];
+            // Add placeholder with pending summary; updated when tool_result arrives
+            next.set(assistantMsgIndex, [...existing, { toolCallId: event.toolCallId, tool: event.tool, args: event.args, summary: '...' }]);
+            return next;
+          });
+        },
+        onToolResult: (toolCallId, _tool, summary) => {
+          setMessageToolActions(prev => {
+            const next = new Map(prev);
+            const existing = [...(next.get(assistantMsgIndex) ?? [])];
+            // Match by toolCallId for reliable identification even with duplicate tool types
+            const idx = existing.findIndex(a => a.toolCallId === toolCallId);
+            if (idx >= 0) {
+              existing[idx] = { ...existing[idx], summary };
+            }
+            next.set(assistantMsgIndex, existing);
+            return next;
+          });
+        },
+      });
+    } else {
+      abortRef.current = streamAIChat({
+        messages: [...chatMessages, userMsg],
+        context,
+        model: selectedModel,
+        onChunk: (chunk) => {
+          fullContent += chunk;
+          updateLastAssistantMessage(fullContent);
+        },
+        onDone: () => {
+          setAiLoading(false);
+          abortRef.current = null;
+        },
+        onError: (err) => {
+          updateLastAssistantMessage(`错误: ${err}`);
+          setAiLoading(false);
+          abortRef.current = null;
+        },
+        onUsage: (usage, model) => {
+          const { inputPrice, outputPrice } = getModelPrices(model);
+          const cost = (usage.prompt_tokens / 1000) * inputPrice + (usage.completion_tokens / 1000) * outputPrice;
+          setLastUsage({ tokens: usage.total_tokens, cost });
+          recordTokenUsage({
+            model,
+            promptTokens: usage.prompt_tokens,
+            completionTokens: usage.completion_tokens,
+            totalTokens: usage.total_tokens,
+          }).catch(() => { /* ignore */ });
+        },
+      });
+    }
   }
 
   async function handleApplyFile(file: { path: string; content: string }) {
@@ -510,6 +592,7 @@ export default function ChatPanel() {
 
   const activeTab = openTabs.find(t => t.path === activeTabPath);
   const isTyping = isAiLoading && chatMessages[chatMessages.length - 1]?.content === '';
+  const smartModeAvailable = !!currentProject?.path;
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-primary)] relative">
@@ -528,6 +611,19 @@ export default function ChatPanel() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Smart mode toggle */}
+            <button
+              onClick={toggleSmartMode}
+              disabled={!smartModeAvailable}
+              className={`p-1.5 rounded-lg transition-colors ${
+                smartModeAvailable && smartMode
+                  ? 'text-[var(--accent-primary)] bg-[var(--accent-bg)]'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+              title={smartModeAvailable ? (smartMode ? '智能模式已开启（点击关闭）' : '开启智能模式') : '请先打开项目'}
+            >
+              <Brain size={14} />
+            </button>
             <ChatHistoryButton
               onClick={() => setShowHistoryPanel(v => !v)}
               isOpen={showHistoryPanel}
@@ -584,6 +680,12 @@ export default function ChatPanel() {
           )}
           <span className="text-[var(--border-primary)]">·</span>
           <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">{selectedModel}</span>
+          {smartModeAvailable && smartMode && (
+            <>
+              <span className="text-[var(--border-primary)]">·</span>
+              <span className="text-[10px] text-[var(--accent-primary)] whitespace-nowrap">🧠 智能模式</span>
+            </>
+          )}
         </div>
       )}
 
@@ -600,6 +702,8 @@ export default function ChatPanel() {
                 onApplyFile={handleApplyFile}
                 onApplyAll={handleApplyAll}
                 appliedFiles={appliedFiles}
+                toolActions={messageToolActions.get(i)}
+                isToolLoading={loadingMsgIndex === i && isAiLoading}
               />
             ))}
             {isTyping && (

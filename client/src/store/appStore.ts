@@ -87,6 +87,7 @@ interface AppState {
   showNpmPanel: boolean;
   showStatsPanel: boolean;
   aiMode: 'chat' | 'agent';
+  smartMode: boolean;
   sidebarWidth: number;
   aiPanelWidth: number;
   currentBranch: string | null;
@@ -124,6 +125,7 @@ interface AppState {
   toggleStatsPanel: () => void;
   setAiMode: (mode: 'chat' | 'agent') => void;
   activateAgentMode: () => void;
+  toggleSmartMode: () => void;
   setSidebarWidth: (width: number) => void;
   setAIPanelWidth: (width: number) => void;
   setCurrentBranch: (branch: string) => void;
@@ -165,6 +167,7 @@ export const useAppStore = create<AppState>()(
           showNpmPanel: false,
           showStatsPanel: false,
           aiMode: 'chat' as const,
+          smartMode: true,
           sidebarWidth: 240,
           aiPanelWidth: 320,
           currentBranch: null,
@@ -248,6 +251,7 @@ export const useAppStore = create<AppState>()(
           toggleStatsPanel: () => set((state) => ({ showStatsPanel: !state.showStatsPanel })),
           setAiMode: (mode) => set({ aiMode: mode }),
           activateAgentMode: () => set({ aiMode: 'agent', showAIPanel: true }),
+          toggleSmartMode: () => set((state) => ({ smartMode: !state.smartMode })),
           setSidebarWidth: (width) => set({ sidebarWidth: width }),
           setAIPanelWidth: (width) => set({ aiPanelWidth: width }),
           setCurrentBranch: (branch) => set({ currentBranch: branch }),
@@ -481,6 +485,7 @@ export const useAppStore = create<AppState>()(
           activeChatSessionId: state.activeChatSessionId,
           selectedModel: state.selectedModel,
           aiMode: state.aiMode,
+          smartMode: state.smartMode,
           theme: state.theme,
         }),
         onRehydrateStorage: () => (state) => {

@@ -23,6 +23,18 @@ interface StreamAIChatOptions {
   onUsage?: (usage: UsageInfo, model: string) => void;
 }
 
+export interface ToolCallEvent {
+  tool: string;
+  toolCallId: string;
+  args: Record<string, unknown>;
+}
+
+export interface SmartChatCallbacks extends StreamAIChatOptions {
+  onToolCall?: (event: ToolCallEvent) => void;
+  onToolResult?: (toolCallId: string, tool: string, summary: string) => void;
+  onThinking?: (message: string) => void;
+}
+
 export function streamAIChat(options: StreamAIChatOptions): () => void {
   const { messages, context, model, onChunk, onDone, onError, onUsage } = options;
   const controller = new AbortController();
@@ -71,6 +83,89 @@ export function streamAIChat(options: StreamAIChatOptions): () => void {
               }
               if (parsed.content) {
                 onChunk(parsed.content);
+              }
+            } catch {
+              if (import.meta.env.DEV) {
+                console.warn('[aiApi] Malformed SSE line:', data);
+              }
+            }
+          }
+        }
+      }
+      onDone();
+    })
+    .catch((err: Error) => {
+      if (err.name !== 'AbortError') {
+        onError(err.message || 'Network error');
+      } else {
+        onDone();
+      }
+    });
+
+  return () => controller.abort();
+}
+
+export function streamSmartChat(options: SmartChatCallbacks): () => void {
+  const { messages, context, model, onChunk, onDone, onError, onUsage, onToolCall, onToolResult, onThinking } = options;
+  const controller = new AbortController();
+
+  fetch('/api/ai/smart-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, context, model }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        onError(err.error || 'AI 请求失败');
+        return;
+      }
+      const reader = res.body?.getReader();
+      if (!reader) {
+        onError('无法读取响应流');
+        return;
+      }
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') {
+              onDone();
+              return;
+            }
+            try {
+              const parsed = JSON.parse(data) as Record<string, unknown>;
+              if (parsed.error) {
+                onError(parsed.error as string);
+                return;
+              }
+              if (parsed.type === 'usage' && parsed.usage && onUsage) {
+                onUsage(parsed.usage as UsageInfo, parsed.model as string);
+              }
+              if (parsed.type === 'content' && parsed.content) {
+                onChunk(parsed.content as string);
+              }
+              if (parsed.type === 'tool_call' && onToolCall) {
+                onToolCall({
+                  tool: parsed.tool as string,
+                  toolCallId: parsed.toolCallId as string,
+                  args: parsed.args as Record<string, unknown>,
+                });
+              }
+              if (parsed.type === 'tool_result' && onToolResult) {
+                onToolResult(parsed.toolCallId as string, parsed.tool as string, parsed.summary as string);
+              }
+              if (parsed.type === 'thinking' && onThinking) {
+                onThinking(parsed.message as string);
               }
             } catch {
               if (import.meta.env.DEV) {
