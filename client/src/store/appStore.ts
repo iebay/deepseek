@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, devtools } from 'zustand/middleware';
 import type { FileNode, Tab, ChatMessage, ProjectInfo } from '../types';
 import { saveFile, deleteFile, fetchFileTree } from '../api/filesApi';
+import { MODELS } from '../constants/models';
 
 const MAX_OPERATION_HISTORY = 50;
 
@@ -494,6 +495,11 @@ export const useAppStore = create<AppState>()(
           const savedTheme = (localStorage.getItem('theme') as 'dark' | 'light') || state.theme || 'dark';
           state.theme = savedTheme;
           document.documentElement.setAttribute('data-theme', savedTheme);
+          // Validate selected model — remove legacy/deprecated model IDs
+          const validModels = MODELS.map(m => m.value);
+          if (!validModels.includes(state.selectedModel)) {
+            state.selectedModel = 'deepseek-chat';
+          }
           if (state.chatSessions.length === 0) {
             // Ensure there is always at least one session
             const fresh = createNewSession();
