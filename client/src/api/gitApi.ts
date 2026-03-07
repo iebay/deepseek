@@ -105,6 +105,122 @@ export async function configGitToken(token: string): Promise<SimpleResult> {
   return res.json();
 }
 
+export interface BranchInfo {
+  name: string;
+  isCurrent: boolean;
+  lastCommit: string;
+  lastCommitMessage: string;
+  lastCommitDate: string;
+}
+
+export interface BranchesResponse {
+  current: string;
+  local: BranchInfo[];
+  remote: { name: string; lastCommit: string }[];
+}
+
+export interface MergeResult {
+  success: boolean;
+  message: string;
+  conflicts?: string[];
+}
+
+export async function fetchBranches(root: string): Promise<BranchesResponse> {
+  const res = await fetch(`${BASE}/branches?root=${encodeURIComponent(root)}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Failed to get branches');
+  }
+  return res.json();
+}
+
+export async function createBranch(
+  root: string,
+  name: string,
+  baseBranch: string,
+  checkout = false
+): Promise<void> {
+  const res = await fetch(`${BASE}/branch/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, name, baseBranch, checkout }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Failed to create branch');
+  }
+}
+
+export async function checkoutBranch(root: string, name: string): Promise<void> {
+  const res = await fetch(`${BASE}/branch/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Failed to checkout branch');
+  }
+}
+
+export async function mergeBranch(
+  root: string,
+  sourceBranch: string,
+  targetBranch: string
+): Promise<MergeResult> {
+  const res = await fetch(`${BASE}/branch/merge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, sourceBranch, targetBranch }),
+  });
+  const data = await res.json().catch(() => ({ success: false, message: res.statusText }));
+  if (!res.ok) {
+    return { success: false, message: data.error || data.message || 'Merge failed', conflicts: data.conflicts };
+  }
+  return data;
+}
+
+export async function deleteBranch(root: string, name: string, force = false): Promise<void> {
+  const res = await fetch(`${BASE}/branch/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, name, force }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Failed to delete branch');
+  }
+}
+
+export async function pullBranch(root: string, remote: string, branch: string): Promise<void> {
+  const res = await fetch(`${BASE}/branch/pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, remote, branch }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Failed to pull branch');
+  }
+}
+
+export async function pushBranch(
+  root: string,
+  remote: string,
+  branch: string,
+  setUpstream = false
+): Promise<void> {
+  const res = await fetch(`${BASE}/branch/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root, remote, branch, setUpstream }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Failed to push branch');
+  }
+}
+
 export interface CloneResult {
   success: boolean;
   path: string;

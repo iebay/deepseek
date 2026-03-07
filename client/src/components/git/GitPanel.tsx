@@ -14,6 +14,7 @@ import {
   configGitToken,
 } from '../../api/gitApi';
 import type { GitStatus, GitChange, GitCommit as GitCommitType } from '../../types';
+import BranchManager from './BranchManager';
 
 function StatusIcon({ status }: { status: GitChange['status'] }) {
   if (status === 'added') return <Plus size={12} className="text-[#3fb950]" />;
@@ -41,7 +42,7 @@ function statusLabel(status: GitChange['status']) {
 }
 
 export default function GitPanel() {
-  const { currentProject, showToast } = useAppStore();
+  const { currentProject, showToast, closeAllTabs, setFileTree } = useAppStore();
   const root = currentProject?.path ?? '';
 
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
@@ -227,6 +228,18 @@ export default function GitPanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* Branch Manager — always show when in a repo */}
+        {gitStatus?.isRepo && (
+          <BranchManager
+            root={root}
+            onBranchChange={() => {
+              closeAllTabs();
+              setFileTree(null);
+              loadStatus();
+            }}
+          />
+        )}
+
         {/* Not a repo */}
         {gitStatus && !gitStatus.isRepo && (
           <div className="p-3 flex flex-col gap-2">
