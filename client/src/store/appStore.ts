@@ -1,6 +1,24 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, devtools } from 'zustand/middleware';
 import type { FileNode, Tab, ChatMessage, ProjectInfo } from '../types';
+import { saveFile, deleteFile, fetchFileTree } from '../api/filesApi';
+
+const MAX_OPERATION_HISTORY = 50;
+
+export interface FileOperationChange {
+  filePath: string;
+  oldContent: string | null;  // null means file didn't exist (new file)
+  newContent: string | null;  // null means file was deleted
+  backupPath?: string;
+}
+
+export interface FileOperation {
+  id: string;
+  type: 'apply' | 'create' | 'delete' | 'rename' | 'edit';
+  timestamp: number;
+  description: string;
+  changes: FileOperationChange[];
+}
 
 export interface ChatSession {
   id: string;
@@ -75,6 +93,10 @@ interface AppState {
   isAiLoading: boolean;
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
   previewUrl: string;
+  operationHistory: FileOperation[];
+  operationIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
 
   setFileTree: (tree: FileNode | null) => void;
   setCurrentProject: (project: ProjectInfo | null) => void;
@@ -108,12 +130,16 @@ interface AppState {
   createChatSession: () => void;
   switchChatSession: (id: string) => void;
   deleteChatSession: (id: string) => void;
+  pushOperation: (op: Omit<FileOperation, 'id' | 'timestamp'>) => void;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  clearHistory: () => void;
 }
 
 export const useAppStore = create<AppState>()(
   devtools(
     persist(
-      (set) => {
+      (set, get) => {
         const initialSession = createNewSession();
         return {
           fileTree: null,
@@ -138,6 +164,10 @@ export const useAppStore = create<AppState>()(
           isAiLoading: false,
           toast: null,
           previewUrl: '',
+          operationHistory: [],
+          operationIndex: -1,
+          canUndo: false,
+          canRedo: false,
 
           setFileTree: (tree) => set({ fileTree: tree }),
           setCurrentProject: (project) => set({ currentProject: project }),
@@ -294,6 +324,130 @@ export const useAppStore = create<AppState>()(
                 chatMessages: activeSession?.messages ?? [],
               };
             }),
+
+          pushOperation: (op) =>
+            set((state) => {
+              const id = generateSessionId();
+              const newOp: FileOperation = { ...op, id, timestamp: Date.now() };
+              // Discard any redo history beyond current index
+              const truncated = state.operationHistory.slice(0, state.operationIndex + 1);
+              let newHistory = [...truncated, newOp];
+              // Enforce max history size
+              if (newHistory.length > MAX_OPERATION_HISTORY) {
+                newHistory = newHistory.slice(newHistory.length - MAX_OPERATION_HISTORY);
+              }
+              const newIndex = newHistory.length - 1;
+              return {
+                operationHistory: newHistory,
+                operationIndex: newIndex,
+                canUndo: newIndex >= 0,
+                canRedo: false,
+              };
+            }),
+
+          undo: async () => {
+            const state = get();
+            const op = state.operationHistory[state.operationIndex];
+            if (!op) return;
+            try {
+              for (const change of op.changes) {
+                if (change.oldContent === null) {
+                  // File was newly created; undo = delete it
+                  await deleteFile(change.filePath);
+                } else {
+                  // Restore the previous content
+                  await saveFile(change.filePath, change.oldContent);
+                }
+              }
+              const newIndex = state.operationIndex - 1;
+              set(s => {
+                const updatedTabs = s.openTabs
+                  .filter(tab => {
+                    const change = op.changes.find(c => c.filePath === tab.path);
+                    // If file was newly created and we're undoing, close the tab
+                    return !(change && change.oldContent === null);
+                  })
+                  .map(tab => {
+                    const change = op.changes.find(c => c.filePath === tab.path);
+                    if (!change) return tab;
+                    return { ...tab, content: change.oldContent as string, isDirty: false };
+                  });
+                const activeStillExists = updatedTabs.some(t => t.path === s.activeTabPath);
+                return {
+                  operationIndex: newIndex,
+                  canUndo: newIndex >= 0,
+                  canRedo: true,
+                  openTabs: updatedTabs,
+                  activeTabPath: activeStillExists ? s.activeTabPath : (updatedTabs[updatedTabs.length - 1]?.path ?? null),
+                };
+              });
+              // Refresh file tree
+              const currentProject = get().currentProject;
+              if (currentProject) {
+                try {
+                  const tree = await fetchFileTree(currentProject.path);
+                  set({ fileTree: tree });
+                } catch { /* ignore tree refresh errors */ }
+              }
+              get().showToast(`↩ 已撤销: ${op.description}`, 'info');
+            } catch (e) {
+              get().showToast(`撤销失败: ${e instanceof Error ? e.message : String(e)}`, 'error');
+            }
+          },
+
+          redo: async () => {
+            const state = get();
+            const op = state.operationHistory[state.operationIndex + 1];
+            if (!op) return;
+            try {
+              for (const change of op.changes) {
+                if (change.newContent === null) {
+                  // Operation was a deletion; redo = delete again
+                  await deleteFile(change.filePath);
+                } else {
+                  // Re-apply the new content
+                  await saveFile(change.filePath, change.newContent);
+                }
+              }
+              const newIndex = state.operationIndex + 1;
+              const newHistory = get().operationHistory;
+              set(s => {
+                const updatedTabs = s.openTabs
+                  .filter(tab => {
+                    const change = op.changes.find(c => c.filePath === tab.path);
+                    // If the operation deleted this file, close the tab
+                    return !(change && change.newContent === null);
+                  })
+                  .map(tab => {
+                    const change = op.changes.find(c => c.filePath === tab.path);
+                    if (!change || change.newContent === null) return tab;
+                    return { ...tab, content: change.newContent, isDirty: false };
+                  });
+                const activeStillExists = updatedTabs.some(t => t.path === s.activeTabPath);
+                return {
+                  operationIndex: newIndex,
+                  canUndo: newIndex >= 0,
+                  canRedo: newIndex < newHistory.length - 1,
+                  openTabs: updatedTabs,
+                  activeTabPath: activeStillExists ? s.activeTabPath : (updatedTabs[updatedTabs.length - 1]?.path ?? null),
+                };
+              });
+              // Refresh file tree
+              const currentProject = get().currentProject;
+              if (currentProject) {
+                try {
+                  const tree = await fetchFileTree(currentProject.path);
+                  set({ fileTree: tree });
+                } catch { /* ignore tree refresh errors */ }
+              }
+              get().showToast(`↪ 已重做: ${op.description}`, 'info');
+            } catch (e) {
+              get().showToast(`重做失败: ${e instanceof Error ? e.message : String(e)}`, 'error');
+            }
+          },
+
+          clearHistory: () =>
+            set({ operationHistory: [], operationIndex: -1, canUndo: false, canRedo: false }),
         };
       },
       {
