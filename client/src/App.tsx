@@ -6,6 +6,7 @@ import TopBar from './components/layout/TopBar';
 import FileTree from './components/fileTree/FileTree';
 import SearchPanel from './components/search/SearchPanel';
 import CodeEditor from './components/editor/CodeEditor';
+import WelcomePage from './components/welcome/WelcomePage';
 import UnifiedAIPanel from './components/ai/UnifiedAIPanel';
 import GitPanel from './components/git/GitPanel';
 import LivePreview from './components/preview/LivePreview';
@@ -65,6 +66,7 @@ function EditorLayout() {
     setSidebarWidth, setAIPanelWidth,
     toggleSidebar, toggleAIPanel,
     openTabs, activeTabPath,
+    currentProject,
   } = useAppStore();
 
   // Warn before leaving with unsaved changes
@@ -141,10 +143,10 @@ function EditorLayout() {
           </>
         )}
 
-        {/* Center: Code Editor */}
+        {/* Center: Code Editor or Welcome Page */}
         <main className="flex-1 overflow-hidden min-w-0">
           <ErrorBoundary>
-            <CodeEditor />
+            {currentProject === null ? <WelcomePage /> : <CodeEditor />}
           </ErrorBoundary>
         </main>
 

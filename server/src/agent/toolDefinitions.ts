@@ -235,6 +235,29 @@ export const ALL_TOOLS: ToolDefinition[] = [
     scope: ['agent'],
   },
   {
+    name: 'create_project',
+    description: '从模板创建一个新项目。可用模板包括：react-fullstack（React 全栈）、admin-dashboard（管理后台）、ecommerce（电商前台）、mobile-h5（移动端 H5）、blog-cms（博客 CMS）、auth-pages（登录注册页面）等。',
+    parameters: {
+      type: 'object',
+      properties: {
+        template_id: {
+          type: 'string',
+          description: '模板 ID，如 react-fullstack、admin-dashboard、ecommerce、mobile-h5、blog-cms、auth-pages',
+        },
+        project_name: {
+          type: 'string',
+          description: '项目名称，将作为项目目录名',
+        },
+        target_path: {
+          type: 'string',
+          description: '项目创建的父目录路径（可选，默认使用项目根目录）',
+        },
+      },
+      required: ['template_id', 'project_name'],
+    },
+    scope: ['agent'],
+  },
+  {
     name: 'task_complete',
     description: '标记任务完成，输出最终总结',
     parameters: {
