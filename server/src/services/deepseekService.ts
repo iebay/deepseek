@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { Response } from 'express';
 import { loadProjectMemory } from './memoryService';
+import { sanitizeContent } from '../utils/sanitize';
 
 export interface MultimodalContentPart {
   type: 'text' | 'image_url';
@@ -52,6 +53,7 @@ const SYSTEM_PROMPT = `你是 DeepSeek Code AI 助手——一个集成在代码
 - **主动发现问题**: 如果你发现代码中有 bug、安全隐患或性能问题，主动指出。
 - **遵循项目现有的代码风格和规范**。
 - **使用中文回答**。
+- **绝对不要在回复中输出 XML 标签**。禁止输出 \`<function_calls>\`、\`<invoke>\`、\`<parameter>\`、\`<DSML>\` 等任何 XML/HTML 标签。如果你需要调用工具，请使用 API 提供的 tool_call 机制，不要在文本中模拟。
 
 ## 文件修改格式
 
@@ -125,7 +127,10 @@ export async function streamChat(
     { role: 'system', content: systemContent },
     ...messages.map(m => {
       if (m.role === 'user' && Array.isArray(m.content)) {
-        return { role: 'user', content: m.content } as OpenAI.Chat.ChatCompletionMessageParam;
+        const textOnly = (m.content as Array<{ type: string; text?: string }>)
+          .filter(part => part.type === 'text')
+          .map(part => ({ type: 'text' as const, text: part.text ?? '' }));
+        return { role: 'user', content: textOnly } as OpenAI.Chat.ChatCompletionMessageParam;
       }
       return { role: m.role, content: m.content as string } as OpenAI.Chat.ChatCompletionMessageParam;
     }),
@@ -148,7 +153,10 @@ export async function streamChat(
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) {
-        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+        const clean = sanitizeContent(delta);
+        if (clean) {
+          res.write(`data: ${JSON.stringify({ content: clean })}\n\n`);
+        }
       }
       if (chunk.usage) {
         res.write(`data: ${JSON.stringify({
