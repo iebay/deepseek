@@ -98,7 +98,7 @@ npm run dev
 |------|------|
 | 前端 | React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui |
 | 编辑器 | Monaco Editor（VS Code 同款） |
-| AI | DeepSeek API（deepseek-chat / deepseek-reasoner / deepseek-coder） |
+| AI | DeepSeek API（deepseek-chat / deepseek-reasoner） |
 | 后端 | Node.js + Express |
 | 状态管理 | Zustand |
 
