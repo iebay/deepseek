@@ -46,7 +46,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
     <div
       ref={menuRef}
       style={style}
-      className="bg-[#1c2128] border border-[#30363d] rounded-md shadow-xl py-1 min-w-[160px]"
+      className="bg-[#1c2128] border border-[var(--border-primary)] rounded-md shadow-xl py-1 min-w-[160px]"
     >
       {items.map((item, i) => (
         <button
@@ -54,8 +54,8 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           onClick={() => { item.onClick(); onClose(); }}
           className={`flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs transition-colors ${
             item.danger
-              ? 'text-[#f85149] hover:bg-[#21262d]'
-              : 'text-[#e6edf3] hover:bg-[#21262d]'
+              ? 'text-[var(--error)] hover:bg-[var(--bg-hover)]'
+              : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
           }`}
         >
           {item.icon && <span className="shrink-0">{item.icon}</span>}

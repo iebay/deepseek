@@ -35,18 +35,18 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
   }
 
   return (
-    <div className="my-2 rounded-lg overflow-hidden border border-[#30363d]">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-[#21262d] border-b border-[#30363d]">
-        <span className="text-[10px] text-[#8b949e] font-mono">{language || '代码'}</span>
+    <div className="my-2 rounded-lg overflow-hidden border border-[var(--border-primary)]">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)]">
+        <span className="text-[10px] text-[var(--text-secondary)] font-mono">{language || '代码'}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 text-[10px] text-[#8b949e] hover:text-[#e6edf3] transition-colors"
+          className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
         >
-          {copied ? <Check size={11} className="text-[#3fb950]" /> : <Copy size={11} />}
+          {copied ? <Check size={11} className="text-[var(--success)]" /> : <Copy size={11} />}
           {copied ? '已复制' : '复制'}
         </button>
       </div>
-      <pre className="px-3 py-2.5 text-xs text-[#e6edf3] overflow-x-auto bg-[#0d1117] font-mono leading-relaxed">
+      <pre className="px-3 py-2.5 text-xs text-[var(--text-primary)] overflow-x-auto bg-[var(--bg-primary)] font-mono leading-relaxed">
         <code>{code}</code>
       </pre>
     </div>
@@ -117,12 +117,12 @@ function renderInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-[#e6edf3]">{part.slice(2, -2)}</strong>;
+      return <strong key={i} className="font-semibold text-[var(--text-primary)]">{part.slice(2, -2)}</strong>;
     }
     const codeParts = part.split(/(`[^`]+`)/g);
     return codeParts.map((cp, j) => {
       if (cp.startsWith('`') && cp.endsWith('`')) {
-        return <code key={j} className="px-1 py-0.5 bg-[#21262d] rounded text-[#e6edf3] text-[11px] font-mono">{cp.slice(1, -1)}</code>;
+        return <code key={j} className="px-1 py-0.5 bg-[var(--bg-tertiary)] rounded text-[var(--text-primary)] text-[11px] font-mono">{cp.slice(1, -1)}</code>;
       }
       return cp;
     });
@@ -132,9 +132,9 @@ function renderInline(text: string): React.ReactNode {
 function TypingDots() {
   return (
     <div className="flex items-center gap-1 py-1">
-      <span className="w-1.5 h-1.5 bg-[#388bfd] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <span className="w-1.5 h-1.5 bg-[#388bfd] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <span className="w-1.5 h-1.5 bg-[#388bfd] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+      <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+      <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
     </div>
   );
 }
@@ -195,7 +195,7 @@ function MessageBubble({
           }
           if (part.type === 'image_url' && part.image_url) {
             return (
-              <img key={i} src={part.image_url.url} alt="attached" className="max-w-full rounded-lg border border-[#30363d]" style={{ maxHeight: 200 }} />
+              <img key={i} src={part.image_url.url} alt="attached" className="max-w-full rounded-lg border border-[var(--border-primary)]" style={{ maxHeight: 200 }} />
             );
           }
           return null;
@@ -208,11 +208,11 @@ function MessageBubble({
 
   return (
     <div className={`flex gap-2.5 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[#388bfd]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
+      <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUser ? 'bg-[var(--accent-primary)]' : 'bg-gradient-to-br from-[#238636] to-[#2ea043]'}`}>
         {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
       <div className={`max-w-[85%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-        <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[#388bfd]/20 text-[#e6edf3] rounded-tr-sm' : 'bg-[#161b22] text-[#e6edf3] border border-[#30363d] rounded-tl-sm'}`}>
+        <div className={`rounded-xl px-3 py-2 text-sm break-words ${isUser ? 'bg-[var(--accent-bg)] text-[var(--text-primary)] rounded-tr-sm' : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-primary)] rounded-tl-sm'}`}>
           {isUser ? (
             renderUserContent()
           ) : (
@@ -222,7 +222,7 @@ function MessageBubble({
           )}
         </div>
         {msg.timestamp && (
-          <span className="text-[10px] text-[#6e7681] px-1">{formatTime(msg.timestamp)}</span>
+          <span className="text-[10px] text-[var(--text-tertiary)] px-1">{formatTime(msg.timestamp)}</span>
         )}
       </div>
     </div>
@@ -490,17 +490,17 @@ export default function ChatPanel() {
   const isTyping = isAiLoading && chatMessages[chatMessages.length - 1]?.content === '';
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117] relative">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] relative">
       {/* Header */}
       <div className="relative">
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#30363d] shrink-0 bg-[#161b22]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border-primary)] shrink-0 bg-[var(--bg-secondary)]">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-gradient-to-br from-[#388bfd] to-[#58a6ff] rounded-lg flex items-center justify-center">
               <Sparkles size={13} className="text-white" />
             </div>
-            <span className="text-sm font-semibold text-[#e6edf3]">AI 助手</span>
+            <span className="text-sm font-semibold text-[var(--text-primary)]">AI 助手</span>
             {isAiLoading && (
-              <span className="text-[10px] text-[#388bfd] animate-pulse">
+              <span className="text-[10px] text-[var(--accent-primary)] animate-pulse">
                 {elapsed > 0 ? `${elapsed}s` : '思考中...'}
               </span>
             )}
@@ -513,7 +513,7 @@ export default function ChatPanel() {
             {isAiLoading && (
               <button
                 onClick={() => abortRef.current?.()}
-                className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
+                className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 transition-colors"
                 title="停止生成"
               >
                 <StopCircle size={14} />
@@ -522,7 +522,7 @@ export default function ChatPanel() {
             {chatMessages.length > 0 && (
               <button
                 onClick={() => exportChatAsMarkdown(chatMessages, currentProject?.name ?? '')}
-                className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+                className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 title="导出对话"
               >
                 <Download size={14} />
@@ -530,7 +530,7 @@ export default function ChatPanel() {
             )}
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="p-1.5 rounded-lg text-[#6e7681] hover:text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
+              className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 transition-colors"
               title="清空对话"
             >
               <Trash2 size={14} />
@@ -545,23 +545,23 @@ export default function ChatPanel() {
 
       {/* Context info bar */}
       {(activeTab || currentProject) && (
-        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#30363d] bg-[#161b22]/50 shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]/50 shrink-0 overflow-x-auto">
           {activeTab && (
-            <span className="flex items-center gap-1 text-[10px] text-[#8b949e] whitespace-nowrap">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#388bfd]" />
+            <span className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)] whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
               {activeTab.path.split('/').pop()}
             </span>
           )}
           {currentProject?.techStack && currentProject.techStack.length > 0 && (
             <>
-              <span className="text-[#30363d]">·</span>
-              <span className="text-[10px] text-[#8b949e] whitespace-nowrap">
+              <span className="text-[var(--text-muted)]">·</span>
+              <span className="text-[10px] text-[var(--text-secondary)] whitespace-nowrap">
                 {currentProject.techStack.slice(0, 3).join(' · ')}
               </span>
             </>
           )}
-          <span className="text-[#30363d]">·</span>
-          <span className="text-[10px] text-[#6e7681] whitespace-nowrap">{selectedModel}</span>
+          <span className="text-[var(--text-muted)]">·</span>
+          <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">{selectedModel}</span>
         </div>
       )}
 
@@ -585,7 +585,7 @@ export default function ChatPanel() {
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#238636] to-[#2ea043] flex items-center justify-center shrink-0">
                   <Bot size={13} />
                 </div>
-                <div className="bg-[#161b22] border border-[#30363d] rounded-xl rounded-tl-sm px-3 py-2">
+                <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl rounded-tl-sm px-3 py-2">
                   <TypingDots />
                 </div>
               </div>
@@ -596,9 +596,9 @@ export default function ChatPanel() {
       </div>
 
       {/* Input */}
-      <div className="px-3 py-2.5 border-t border-[#30363d] shrink-0">
+      <div className="px-3 py-2.5 border-t border-[var(--border-primary)] shrink-0">
         <div className="flex gap-2 items-end">
-          <div className="flex-1 bg-[#161b22] border border-[#30363d] rounded-xl focus-within:border-[#388bfd] transition-colors">
+          <div className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl focus-within:border-[var(--accent-primary)] transition-colors">
             {images.length > 0 && (
               <div className="px-3 pt-2">
                 <ImageUpload images={images} onChange={setImages} />
@@ -606,7 +606,7 @@ export default function ChatPanel() {
             )}
             <textarea
               ref={textareaRef}
-              className="w-full bg-transparent text-sm text-[#e6edf3] placeholder-[#6e7681] px-3 py-2.5 resize-none focus:outline-none min-h-[40px] max-h-[120px]"
+              className="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] px-3 py-2.5 resize-none focus:outline-none min-h-[40px] max-h-[120px]"
               style={{ height: '40px' }}
               placeholder="描述你的需求..."
               value={input}
@@ -626,27 +626,27 @@ export default function ChatPanel() {
           <button
             onClick={() => handleSend()}
             disabled={(!input.trim() && images.length === 0) || isAiLoading}
-            className="shrink-0 w-9 h-9 flex items-center justify-center bg-[#388bfd] hover:bg-[#58a6ff] disabled:bg-[#21262d] disabled:text-[#6e7681] text-white rounded-xl transition-colors"
+            className="shrink-0 w-9 h-9 flex items-center justify-center bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-tertiary)] text-white rounded-xl transition-colors"
           >
             <Send size={15} />
           </button>
         </div>
-        <p className="text-[10px] text-[#6e7681] mt-1.5">Enter 发送 · Shift+Enter 换行</p>
+        <p className="text-[10px] text-[var(--text-tertiary)] mt-1.5">Enter 发送 · Shift+Enter 换行</p>
       </div>
 
       {/* Clear confirm dialog */}
       {showClearConfirm && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-xl mx-4 max-w-xs w-full">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-4 shadow-xl mx-4 max-w-xs w-full">
             <div className="flex items-center gap-2 mb-2">
-              <AlertCircle size={16} className="text-[#d29922]" />
-              <span className="text-sm font-semibold text-[#e6edf3]">清空对话</span>
+              <AlertCircle size={16} className="text-[var(--warning)]" />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">清空对话</span>
             </div>
-            <p className="text-xs text-[#8b949e] mb-4">确定要清空所有对话记录吗？此操作不可撤销。</p>
+            <p className="text-xs text-[var(--text-secondary)] mb-4">确定要清空所有对话记录吗？此操作不可撤销。</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 py-2 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] text-xs rounded-lg transition-colors"
+                className="flex-1 py-2 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-xs rounded-lg transition-colors"
               >
                 取消
               </button>
@@ -657,7 +657,7 @@ export default function ChatPanel() {
                   setShowClearConfirm(false);
                   showToast('对话已清空', 'info');
                 }}
-                className="flex-1 py-2 bg-[#f85149] hover:bg-[#ff7b72] text-white text-xs rounded-lg transition-colors"
+                className="flex-1 py-2 bg-[var(--error)] hover:bg-[var(--error)] text-white text-xs rounded-lg transition-colors"
               >
                 确认清空
               </button>

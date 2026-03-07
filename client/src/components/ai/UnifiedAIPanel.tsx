@@ -7,15 +7,15 @@ export default function UnifiedAIPanel() {
   const { aiMode, setAiMode } = useAppStore();
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117]">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
       {/* Mode tabs */}
-      <div className="flex shrink-0 border-b border-[#30363d] bg-[#161b22]">
+      <div className="flex shrink-0 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
         <button
           onClick={() => setAiMode('chat')}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
             aiMode === 'chat'
-              ? 'border-[#388bfd] text-[#388bfd]'
-              : 'border-transparent text-[#8b949e] hover:text-[#e6edf3]'
+              ? 'border-[#388bfd] text-[var(--accent-primary)]'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           <MessageSquare size={13} />
@@ -25,8 +25,8 @@ export default function UnifiedAIPanel() {
           onClick={() => setAiMode('agent')}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
             aiMode === 'agent'
-              ? 'border-[#388bfd] text-[#388bfd]'
-              : 'border-transparent text-[#8b949e] hover:text-[#e6edf3]'
+              ? 'border-[#388bfd] text-[var(--accent-primary)]'
+              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           <Bot size={13} />

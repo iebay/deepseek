@@ -50,12 +50,12 @@ export default function ImageUpload({ images, onChange }: ImageUploadProps) {
           <img
             src={img.url}
             alt={img.name}
-            className="w-10 h-10 object-cover rounded-lg border border-[#30363d]"
+            className="w-10 h-10 object-cover rounded-lg border border-[var(--border-primary)]"
             title={img.name}
           />
           <button
             onClick={() => removeImage(i)}
-            className="absolute -top-1 -right-1 w-4 h-4 bg-[#f85149] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--error)] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <X size={8} className="text-white" />
           </button>
@@ -66,7 +66,7 @@ export default function ImageUpload({ images, onChange }: ImageUploadProps) {
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="w-10 h-10 flex items-center justify-center border border-dashed border-[#30363d] rounded-lg text-[#6e7681] hover:text-[#e6edf3] hover:border-[#388bfd] transition-colors"
+            className="w-10 h-10 flex items-center justify-center border border-dashed border-[var(--border-primary)] rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)] transition-colors"
             title="添加图片（最多5张，每张≤50MB）"
           >
             <ImagePlus size={15} />

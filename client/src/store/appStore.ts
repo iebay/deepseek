@@ -76,6 +76,7 @@ interface AppState {
   openTabs: Tab[];
   activeTabPath: string | null;
   selectedModel: string;
+  theme: 'dark' | 'light';
   showPreview: boolean;
   showSidebar: boolean;
   showAIPanel: boolean;
@@ -99,6 +100,8 @@ interface AppState {
   canRedo: boolean;
 
   setFileTree: (tree: FileNode | null) => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
   setCurrentProject: (project: ProjectInfo | null) => void;
   openTab: (tab: Tab) => void;
   closeTab: (path: string) => void;
@@ -147,6 +150,7 @@ export const useAppStore = create<AppState>()(
           openTabs: [],
           activeTabPath: null,
           selectedModel: 'deepseek-chat',
+          theme: 'dark' as const,
           showPreview: false,
           showSidebar: true,
           showAIPanel: true,
@@ -170,6 +174,15 @@ export const useAppStore = create<AppState>()(
           canRedo: false,
 
           setFileTree: (tree) => set({ fileTree: tree }),
+          setTheme: (theme) => {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('deepseek-theme', theme);
+            set({ theme });
+          },
+          toggleTheme: () => {
+            const newTheme = get().theme === 'dark' ? 'light' : 'dark';
+            get().setTheme(newTheme);
+          },
           setCurrentProject: (project) => set({ currentProject: project }),
 
           openTab: (tab) =>
@@ -454,6 +467,7 @@ export const useAppStore = create<AppState>()(
         name: 'deepseek-app-store',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
+          theme: state.theme,
           chatSessions: state.chatSessions,
           activeChatSessionId: state.activeChatSessionId,
           selectedModel: state.selectedModel,
@@ -461,6 +475,10 @@ export const useAppStore = create<AppState>()(
         }),
         onRehydrateStorage: () => (state) => {
           if (!state) return;
+          // Restore theme on hydration
+          const savedTheme = (localStorage.getItem('deepseek-theme') as 'dark' | 'light' | null) ?? state.theme ?? 'dark';
+          document.documentElement.setAttribute('data-theme', savedTheme);
+          state.theme = savedTheme;
           if (state.chatSessions.length === 0) {
             // Ensure there is always at least one session
             const fresh = createNewSession();

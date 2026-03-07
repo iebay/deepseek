@@ -49,15 +49,15 @@ export default function EditorTabs() {
 
   if (openTabs.length === 0) {
     return (
-      <div className="h-9 bg-[#0d1117] border-b border-[#30363d] flex items-center px-4 shrink-0">
-        <span className="text-xs text-[#6e7681]">没有打开的文件</span>
+      <div className="h-9 bg-[var(--bg-primary)] border-b border-[var(--border-primary)] flex items-center px-4 shrink-0">
+        <span className="text-xs text-[var(--text-tertiary)]">没有打开的文件</span>
       </div>
     );
   }
 
   return (
     <>
-      <div className="h-9 bg-[#0d1117] border-b border-[#30363d] flex items-center overflow-x-auto shrink-0 scrollbar-thin">
+      <div className="h-9 bg-[var(--bg-primary)] border-b border-[var(--border-primary)] flex items-center overflow-x-auto shrink-0 scrollbar-thin">
         {openTabs.map((tab, index) => (
           <div
             key={tab.path}
@@ -65,22 +65,22 @@ export default function EditorTabs() {
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
-            className={`flex items-center gap-1.5 px-3 h-full border-r border-[#30363d] cursor-pointer text-xs shrink-0 group transition-colors select-none ${
+            className={`flex items-center gap-1.5 px-3 h-full border-r border-[var(--border-primary)] cursor-pointer text-xs shrink-0 group transition-colors select-none ${
               tab.path === activeTabPath
-                ? 'bg-[#1e1e1e] text-[#e6edf3] border-t-2 border-t-[#388bfd]'
-                : 'text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#161b22]'
+                ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] border-t-2 border-t-[var(--accent-primary)]'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
             }`}
             onClick={() => setActiveTab(tab.path)}
             onContextMenu={(e) => handleContextMenu(e, tab.path)}
           >
             {tab.isDirty ? (
-              <Circle size={8} className="text-[#d29922] shrink-0 fill-[#d29922]" />
+              <Circle size={8} className="text-[var(--warning)] shrink-0 fill-[var(--warning)]" />
             ) : (
               <span className="w-2 shrink-0" />
             )}
             <span className="max-w-[120px] truncate" title={tab.path}>{tab.name}</span>
             <button
-              className="opacity-0 group-hover:opacity-100 hover:text-[#f85149] hover:bg-[#f85149]/10 rounded p-0.5 transition-all -mr-1"
+              className="opacity-0 group-hover:opacity-100 hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded p-0.5 transition-all -mr-1"
               onClick={e => { e.stopPropagation(); closeTab(tab.path); }}
               title="关闭"
             >
@@ -93,30 +93,30 @@ export default function EditorTabs() {
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-50 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl py-1 min-w-[180px] text-sm"
+          className="fixed z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-2xl py-1 min-w-[180px] text-sm"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button
-            className="flex items-center gap-2 w-full px-3 py-2 text-[#e6edf3] hover:bg-[#21262d] transition-colors text-left text-xs"
+            className="flex items-center gap-2 w-full px-3 py-2 text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors text-left text-xs"
             onClick={() => { closeTab(contextMenu.path); setContextMenu(null); }}
           >
             关闭
           </button>
           <button
-            className="flex items-center gap-2 w-full px-3 py-2 text-[#e6edf3] hover:bg-[#21262d] transition-colors text-left text-xs"
+            className="flex items-center gap-2 w-full px-3 py-2 text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors text-left text-xs"
             onClick={() => { closeOtherTabs(contextMenu.path); setContextMenu(null); }}
           >
             关闭其他标签页
           </button>
           <button
-            className="flex items-center gap-2 w-full px-3 py-2 text-[#e6edf3] hover:bg-[#21262d] transition-colors text-left text-xs"
+            className="flex items-center gap-2 w-full px-3 py-2 text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors text-left text-xs"
             onClick={() => { closeAllTabs(); setContextMenu(null); }}
           >
             关闭所有标签页
           </button>
-          <div className="h-px bg-[#30363d] my-1" />
+          <div className="h-px bg-[var(--border-primary)] my-1" />
           <button
-            className="flex items-center gap-2 w-full px-3 py-2 text-[#e6edf3] hover:bg-[#21262d] transition-colors text-left text-xs"
+            className="flex items-center gap-2 w-full px-3 py-2 text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors text-left text-xs"
             onClick={() => {
               navigator.clipboard.writeText(contextMenu.path);
               showToast('路径已复制', 'success');

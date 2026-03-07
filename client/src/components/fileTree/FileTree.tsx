@@ -78,7 +78,7 @@ function InlineInput({
 
   return (
     <div
-      className="flex items-center gap-1.5 rounded-md bg-[#21262d]"
+      className="flex items-center gap-1.5 rounded-md bg-[var(--bg-tertiary)]"
       style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '2px', paddingBottom: '2px' }}
     >
       <span className="shrink-0">{icon}</span>
@@ -88,7 +88,7 @@ function InlineInput({
         onChange={e => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => onCancel()}
-        className="flex-1 bg-[#0d1117] border border-[#388bfd] rounded px-1 py-0.5 text-xs text-[#e6edf3] focus:outline-none min-w-0"
+        className="flex-1 bg-[var(--bg-primary)] border border-[#388bfd] rounded px-1 py-0.5 text-xs text-[var(--text-primary)] focus:outline-none min-w-0"
       />
     </div>
   );
@@ -135,22 +135,22 @@ function FileTreeNode({
           <InlineInput
             defaultValue={node.name}
             depth={depth}
-            icon={<Folder size={14} className="text-[#d29922]" />}
+            icon={<Folder size={14} className="text-[var(--warning)]" />}
             onCommit={(name) => onRenameCommit(node, name)}
             onCancel={onRenameCancel}
           />
         ) : (
           <button
-            className="flex items-center gap-1 w-full text-left hover:bg-[#21262d] rounded-md text-sm text-[#e6edf3] transition-colors group"
+            className="flex items-center gap-1 w-full text-left hover:bg-[var(--bg-hover)] rounded-md text-sm text-[var(--text-primary)] transition-colors group"
             style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '3px', paddingBottom: '3px' }}
             onClick={() => onToggle(node.path)}
             onContextMenu={e => onContextMenu(node, e)}
             title={node.path}
           >
-            <span className="shrink-0 text-[#8b949e]">
+            <span className="shrink-0 text-[var(--text-secondary)]">
               {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
             </span>
-            <span className="shrink-0 text-[#d29922]">
+            <span className="shrink-0 text-[var(--warning)]">
               {isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />}
             </span>
             <span className="truncate flex-1 ml-0.5">{node.name}</span>
@@ -164,8 +164,8 @@ function FileTreeNode({
                 depth={depth + 1}
                 icon={
                   inlineCreate?.type === 'directory'
-                    ? <Folder size={14} className="text-[#d29922]" />
-                    : <FileCode size={14} className="text-[#8b949e]" />
+                    ? <Folder size={14} className="text-[var(--warning)]" />
+                    : <FileCode size={14} className="text-[var(--text-secondary)]" />
                 }
                 onCommit={onInlineCreateCommit}
                 onCancel={onInlineCreateCancel}
@@ -212,7 +212,7 @@ function FileTreeNode({
 
   return (
     <button
-      className={`flex items-center gap-1.5 w-full text-left hover:bg-[#21262d] rounded-md text-sm transition-colors ${isActive ? 'bg-[#21262d] text-[#e6edf3]' : 'text-[#8b949e] hover:text-[#e6edf3]'}`}
+      className={`flex items-center gap-1.5 w-full text-left hover:bg-[var(--bg-hover)] rounded-md text-sm transition-colors ${isActive ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
       style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: '8px', paddingTop: '3px', paddingBottom: '3px' }}
       onClick={handleFileClick}
       onContextMenu={e => onContextMenu(node, e)}
@@ -455,8 +455,8 @@ export default function FileTree() {
 
   if (!fileTree) {
     return (
-      <div className="p-4 text-xs text-[#6e7681] flex flex-col items-center gap-2 mt-8">
-        <Folder size={32} className="text-[#30363d]" />
+      <div className="p-4 text-xs text-[var(--text-tertiary)] flex flex-col items-center gap-2 mt-8">
+        <Folder size={32} className="text-[var(--text-muted)]" />
         <p>未打开项目</p>
       </div>
     );
@@ -470,23 +470,23 @@ export default function FileTree() {
       onDrop={handleDrop}
     >
       {isDragOver && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#0d1117]/80 border-2 border-dashed border-[#388bfd] rounded-lg pointer-events-none">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]/80 border-2 border-dashed border-[#388bfd] rounded-lg pointer-events-none">
           <div className="text-center">
-            <Upload size={32} className="text-[#388bfd] mx-auto mb-2" />
-            <p className="text-sm text-[#388bfd]">拖拽文件到此处上传</p>
+            <Upload size={32} className="text-[var(--accent-primary)] mx-auto mb-2" />
+            <p className="text-sm text-[var(--accent-primary)]">拖拽文件到此处上传</p>
           </div>
         </div>
       )}
       {/* Header */}
-      <div className="px-3 py-2 border-b border-[#30363d] shrink-0">
+      <div className="px-3 py-2 border-b border-[var(--border-primary)] shrink-0">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] text-[#6e7681] font-semibold uppercase tracking-widest">
+          <span className="text-[10px] text-[var(--text-tertiary)] font-semibold uppercase tracking-widest">
             {currentProject?.name || '资源管理器'}
           </span>
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className={`p-1 rounded transition-colors ${showSearch ? 'text-[#388bfd]' : 'text-[#6e7681] hover:text-[#e6edf3]'}`}
+              className={`p-1 rounded transition-colors ${showSearch ? 'text-[var(--accent-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
               title="搜索文件 (Ctrl+P)"
             >
               <Search size={12} />
@@ -495,21 +495,21 @@ export default function FileTree() {
               <>
                 <button
                   onClick={() => startCreate(currentProject.path, 'file')}
-                  className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                   title="新建文件"
                 >
                   <FilePlus size={12} />
                 </button>
                 <button
                   onClick={() => startCreate(currentProject.path, 'directory')}
-                  className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                   title="新建文件夹"
                 >
                   <FolderPlus size={12} />
                 </button>
                 <button
                   onClick={() => zipInputRef.current?.click()}
-                  className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                   title="上传 ZIP 并解压"
                 >
                   <Upload size={12} />
@@ -525,14 +525,14 @@ export default function FileTree() {
             )}
             <button
               onClick={expandAll}
-              className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               title="展开全部"
             >
               <ChevronsUpDown size={12} />
             </button>
             <button
               onClick={collapseAll}
-              className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] transition-colors"
+              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               title="折叠全部"
             >
               <ChevronsDownUp size={12} />
@@ -541,19 +541,19 @@ export default function FileTree() {
         </div>
         {showSearch && (
           <div className="relative">
-            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#6e7681]" />
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
             <input
               autoFocus
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="搜索文件..."
-              className="w-full bg-[#21262d] border border-[#30363d] rounded-md pl-6 pr-6 py-1.5 text-xs text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md pl-6 pr-6 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6e7681] hover:text-[#e6edf3]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
               >
                 <X size={11} />
               </button>
@@ -573,8 +573,8 @@ export default function FileTree() {
             depth={0}
             icon={
               inlineCreate.type === 'directory'
-                ? <Folder size={14} className="text-[#d29922]" />
-                : <FileCode size={14} className="text-[#8b949e]" />
+                ? <Folder size={14} className="text-[var(--warning)]" />
+                : <FileCode size={14} className="text-[var(--text-secondary)]" />
             }
             onCommit={handleInlineCreateCommit}
             onCancel={() => setInlineCreate(null)}
@@ -601,8 +601,8 @@ export default function FileTree() {
 
       {/* Footer */}
       {currentProject && (
-        <div className="px-3 py-1.5 border-t border-[#30363d] shrink-0">
-          <span className="text-[10px] text-[#6e7681]">
+        <div className="px-3 py-1.5 border-t border-[var(--border-primary)] shrink-0">
+          <span className="text-[10px] text-[var(--text-tertiary)]">
             {currentProject.fileCount} 个文件
           </span>
         </div>
@@ -621,15 +621,15 @@ export default function FileTree() {
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[#1c2128] border border-[#30363d] rounded-lg shadow-xl p-5 max-w-sm w-full mx-4">
-            <h3 className="text-sm font-semibold text-[#e6edf3] mb-2">确认删除</h3>
-            <p className="text-xs text-[#8b949e] mb-4">
-              确定要删除 <span className="text-[#e6edf3] font-medium">{deleteConfirm.name}</span> 吗？此操作不可撤销。
+          <div className="bg-[#1c2128] border border-[var(--border-primary)] rounded-lg shadow-xl p-5 max-w-sm w-full mx-4">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">确认删除</h3>
+            <p className="text-xs text-[var(--text-secondary)] mb-4">
+              确定要删除 <span className="text-[var(--text-primary)] font-medium">{deleteConfirm.name}</span> 吗？此操作不可撤销。
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-3 py-1.5 text-xs rounded-md border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+                className="px-3 py-1.5 text-xs rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
               >
                 取消
               </button>

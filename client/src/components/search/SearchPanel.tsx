@@ -149,7 +149,7 @@ export default function SearchPanel() {
     const matched = text.slice(matchStart, matchEnd);
     const after = text.slice(matchEnd);
     return (
-      <span className="text-[#8b949e] text-xs font-mono truncate">
+      <span className="text-[var(--text-secondary)] text-xs font-mono truncate">
         <span>{before}</span>
         <span className="bg-[#f0a937]/30 text-[#f0a937] rounded-sm px-px">{matched}</span>
         <span>{after}</span>
@@ -158,31 +158,31 @@ export default function SearchPanel() {
   };
 
   const btnBase = 'p-1 rounded transition-colors text-xs';
-  const btnActive = `${btnBase} text-[#388bfd] bg-[#388bfd]/10`;
-  const btnInactive = `${btnBase} text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d]`;
+  const btnActive = `${btnBase} text-[var(--accent-primary)] bg-[var(--accent-bg)]`;
+  const btnInactive = `${btnBase} text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]`;
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117] text-[#e6edf3] overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-hidden">
       {/* Header */}
-      <div className="px-3 pt-3 pb-2 border-b border-[#30363d] space-y-2 shrink-0">
+      <div className="px-3 pt-3 pb-2 border-b border-[var(--border-primary)] space-y-2 shrink-0">
         {/* Search row */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowReplace(v => !v)}
-            className="text-[#8b949e] hover:text-[#e6edf3] transition-colors shrink-0"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
             title="展开替换"
           >
             {showReplace ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
           <div className="relative flex-1">
-            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#6e7681] pointer-events-none" />
+            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="搜索"
-              className="w-full bg-[#161b22] border border-[#30363d] rounded-md pl-6 pr-2 py-1.5 text-xs text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md pl-6 pr-2 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
             />
           </div>
           <button
@@ -212,19 +212,19 @@ export default function SearchPanel() {
         {showReplace && (
           <div className="flex items-center gap-1 pl-4">
             <div className="relative flex-1">
-              <Replace size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#6e7681] pointer-events-none" />
+              <Replace size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
               <input
                 type="text"
                 value={replaceText}
                 onChange={e => setReplaceText(e.target.value)}
                 placeholder="替换"
-                className="w-full bg-[#161b22] border border-[#30363d] rounded-md pl-6 pr-2 py-1.5 text-xs text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+                className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md pl-6 pr-2 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               />
             </div>
             <button
               onClick={handleReplaceAll}
               disabled={!query.trim() || results.length === 0 || replacingAll}
-              className="flex items-center gap-1 px-2 py-1.5 text-xs rounded-md bg-[#21262d] border border-[#30363d] text-[#e6edf3] hover:bg-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+              className="flex items-center gap-1 px-2 py-1.5 text-xs rounded-md bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
               title="全部替换"
             >
               {replacingAll ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
@@ -241,14 +241,14 @@ export default function SearchPanel() {
               value={includePattern}
               onChange={e => setIncludePattern(e.target.value)}
               placeholder="包含文件 (e.g. *.ts,*.tsx)"
-              className="w-full bg-[#161b22] border border-[#30363d] rounded-md px-2 py-1.5 text-xs text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md px-2 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
             />
             <input
               type="text"
               value={excludePattern}
               onChange={e => setExcludePattern(e.target.value)}
               placeholder="排除文件 (e.g. node_modules,dist)"
-              className="w-full bg-[#161b22] border border-[#30363d] rounded-md px-2 py-1.5 text-xs text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#388bfd] transition-colors"
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md px-2 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
             />
           </div>
         )}
@@ -256,7 +256,7 @@ export default function SearchPanel() {
 
       {/* Status bar */}
       {hasSearched && !isLoading && !error && (
-        <div className="px-3 py-1.5 text-[10px] text-[#6e7681] border-b border-[#30363d] shrink-0">
+        <div className="px-3 py-1.5 text-[10px] text-[var(--text-tertiary)] border-b border-[var(--border-primary)] shrink-0">
           {totalMatches > 0
             ? `${totalMatches} 个结果，来自 ${results.length} 个文件（已搜索 ${filesSearched} 个文件）`
             : `未找到匹配项（已搜索 ${filesSearched} 个文件）`}
@@ -267,39 +267,39 @@ export default function SearchPanel() {
       {/* Results list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <div className="flex items-center gap-2 px-3 py-4 text-xs text-[#8b949e]">
+          <div className="flex items-center gap-2 px-3 py-4 text-xs text-[var(--text-secondary)]">
             <Loader2 size={14} className="animate-spin" />
             搜索中…
           </div>
         )}
 
         {error && (
-          <div className="px-3 py-3 text-xs text-[#f85149]">{error}</div>
+          <div className="px-3 py-3 text-xs text-[var(--error)]">{error}</div>
         )}
 
         {!isLoading && !error && hasSearched && results.length === 0 && (
-          <div className="px-3 py-8 text-center text-xs text-[#6e7681]">未找到匹配项</div>
+          <div className="px-3 py-8 text-center text-xs text-[var(--text-tertiary)]">未找到匹配项</div>
         )}
 
         {!isLoading && !currentProject && (
-          <div className="px-3 py-8 text-center text-xs text-[#6e7681]">请先打开一个项目</div>
+          <div className="px-3 py-8 text-center text-xs text-[var(--text-tertiary)]">请先打开一个项目</div>
         )}
 
         {results.map(result => {
           const isCollapsed = collapsedFiles.has(result.filePath);
           return (
-            <div key={result.filePath} className="border-b border-[#21262d]">
+            <div key={result.filePath} className="border-b border-[var(--border-secondary)]">
               {/* File header */}
               <button
                 onClick={() => toggleFileCollapse(result.filePath)}
-                className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-[#161b22] transition-colors text-left"
+                className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-[var(--bg-secondary)] transition-colors text-left"
               >
                 {isCollapsed
-                  ? <ChevronRight size={12} className="text-[#6e7681] shrink-0" />
-                  : <ChevronDown size={12} className="text-[#6e7681] shrink-0" />
+                  ? <ChevronRight size={12} className="text-[var(--text-tertiary)] shrink-0" />
+                  : <ChevronDown size={12} className="text-[var(--text-tertiary)] shrink-0" />
                 }
                 <span className="text-xs text-[#58a6ff] truncate flex-1 min-w-0">{result.relativePath}</span>
-                <span className="text-[10px] text-[#6e7681] bg-[#21262d] px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded-full shrink-0">
                   {result.matches.length}
                 </span>
               </button>
@@ -309,9 +309,9 @@ export default function SearchPanel() {
                 <button
                   key={idx}
                   onClick={() => handleOpenFile(result.filePath, match)}
-                  className="w-full flex items-start gap-2 px-3 py-1 hover:bg-[#161b22] transition-colors text-left group"
+                  className="w-full flex items-start gap-2 px-3 py-1 hover:bg-[var(--bg-secondary)] transition-colors text-left group"
                 >
-                  <span className="text-[10px] text-[#6e7681] shrink-0 w-8 text-right mt-0.5 tabular-nums">
+                  <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 w-8 text-right mt-0.5 tabular-nums">
                     {match.line}
                   </span>
                   <div className="flex-1 min-w-0 overflow-hidden">
@@ -326,7 +326,7 @@ export default function SearchPanel() {
                   </div>
                   <X
                     size={10}
-                    className="text-[#6e7681] opacity-0 group-hover:opacity-100 shrink-0 mt-1 transition-opacity"
+                    className="text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 shrink-0 mt-1 transition-opacity"
                   />
                 </button>
               ))}

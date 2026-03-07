@@ -26,20 +26,20 @@ function ImagePreview({ path }: { path: string }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#161b22] border-b border-[#30363d] shrink-0">
-        <span className="text-xs text-[#8b949e]">{zoom}%</span>
-        <button onClick={() => setZoom(z => Math.min(400, z + 25))} className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]" title="放大">
+      <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] shrink-0">
+        <span className="text-xs text-[var(--text-secondary)]">{zoom}%</span>
+        <button onClick={() => setZoom(z => Math.min(400, z + 25))} className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title="放大">
           <ZoomIn size={13} />
         </button>
-        <button onClick={() => setZoom(z => Math.max(25, z - 25))} className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]" title="缩小">
+        <button onClick={() => setZoom(z => Math.max(25, z - 25))} className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title="缩小">
           <ZoomOut size={13} />
         </button>
-        <button onClick={() => setRotation(r => (r + 90) % 360)} className="p-1 rounded text-[#6e7681] hover:text-[#e6edf3] hover:bg-[#21262d]" title="旋转">
+        <button onClick={() => setRotation(r => (r + 90) % 360)} className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" title="旋转">
           <RotateCw size={13} />
         </button>
-        <button onClick={() => { setZoom(100); setRotation(0); }} className="text-xs text-[#6e7681] hover:text-[#e6edf3] px-1.5 py-0.5 rounded hover:bg-[#21262d]">重置</button>
+        <button onClick={() => { setZoom(100); setRotation(0); }} className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] px-1.5 py-0.5 rounded hover:bg-[var(--bg-hover)]">重置</button>
       </div>
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-[#0d1117]">
+      <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-[var(--bg-primary)]">
         <img
           src={url}
           alt={path}
@@ -54,13 +54,13 @@ function BinaryFileNotice({ path }: { path: string }) {
   const ext = '.' + (path.split('.').pop() || '').toLowerCase();
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <FileCode size={40} className="text-[#30363d] mb-4" />
-      <p className="text-[#8b949e] text-sm mb-1">无法预览二进制文件</p>
-      <p className="text-[#6e7681] text-xs">{ext.toUpperCase()} 文件无法在编辑器中显示</p>
+      <FileCode size={40} className="text-[var(--text-muted)] mb-4" />
+      <p className="text-[var(--text-secondary)] text-sm mb-1">无法预览二进制文件</p>
+      <p className="text-[var(--text-tertiary)] text-xs">{ext.toUpperCase()} 文件无法在编辑器中显示</p>
       <a
         href={getRawFileUrl(path)}
         download
-        className="mt-4 text-xs text-[#388bfd] hover:underline"
+        className="mt-4 text-xs text-[var(--accent-primary)] hover:underline"
       >
         下载文件
       </a>
@@ -93,11 +93,11 @@ function getLanguageLabel(filename: string): string {
 function Breadcrumb({ path }: { path: string }) {
   const parts = path.split('/').filter(Boolean);
   return (
-    <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-[#30363d] bg-[#161b22] text-xs text-[#8b949e] overflow-x-auto whitespace-nowrap shrink-0">
+    <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] overflow-x-auto whitespace-nowrap shrink-0">
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-0.5">
-          {i > 0 && <ChevronRight size={11} className="text-[#6e7681]" />}
-          <span className={i === parts.length - 1 ? 'text-[#e6edf3]' : ''}>{part}</span>
+          {i > 0 && <ChevronRight size={11} className="text-[var(--text-tertiary)]" />}
+          <span className={i === parts.length - 1 ? 'text-[var(--text-primary)]' : ''}>{part}</span>
         </span>
       ))}
     </div>
@@ -106,18 +106,18 @@ function Breadcrumb({ path }: { path: string }) {
 
 function StatusBar({ filename, line, column }: { filename: string; line: number; column: number }) {
   return (
-    <div className="h-6 bg-[#161b22] border-t border-[#30363d] flex items-center px-3 gap-4 shrink-0">
-      <div className="flex items-center gap-1.5 text-[10px] text-[#8b949e]">
+    <div className="h-6 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] flex items-center px-3 gap-4 shrink-0">
+      <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)]">
         <FileCode size={10} />
         <span>{getLanguageLabel(filename)}</span>
       </div>
-      <div className="flex items-center gap-0.5 text-[10px] text-[#8b949e]">
+      <div className="flex items-center gap-0.5 text-[10px] text-[var(--text-secondary)]">
         <span>行 {line}</span>
-        <span className="text-[#6e7681]">,</span>
+        <span className="text-[var(--text-tertiary)]">,</span>
         <span>列 {column}</span>
       </div>
       <div className="flex-1" />
-      <span className="text-[10px] text-[#6e7681]">UTF-8</span>
+      <span className="text-[10px] text-[var(--text-tertiary)]">UTF-8</span>
     </div>
   );
 }
@@ -132,35 +132,35 @@ function EmptyState() {
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center max-w-sm px-6">
-        <div className="w-16 h-16 bg-[#388bfd]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <FileCode size={28} className="text-[#388bfd]" />
+        <div className="w-16 h-16 bg-[var(--accent-bg)] rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <FileCode size={28} className="text-[var(--accent-primary)]" />
         </div>
-        <h3 className="text-[#e6edf3] font-semibold mb-1.5">选择文件开始编辑</h3>
-        <p className="text-[#8b949e] text-sm mb-6 leading-relaxed">
+        <h3 className="text-[var(--text-primary)] font-semibold mb-1.5">选择文件开始编辑</h3>
+        <p className="text-[var(--text-secondary)] text-sm mb-6 leading-relaxed">
           从左侧文件树选择文件，或使用 AI 助手生成代码
         </p>
         <div className="grid grid-cols-2 gap-2 mb-5">
           {shortcuts.map(({ keys, desc }) => (
-            <div key={keys} className="flex items-center gap-2 bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-left">
-              <Keyboard size={12} className="text-[#388bfd] shrink-0" />
+            <div key={keys} className="flex items-center gap-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-3 py-2 text-left">
+              <Keyboard size={12} className="text-[var(--accent-primary)] shrink-0" />
               <div>
-                <div className="text-[10px] font-mono text-[#e6edf3]">{keys}</div>
-                <div className="text-[10px] text-[#6e7681]">{desc}</div>
+                <div className="text-[10px] font-mono text-[var(--text-primary)]">{keys}</div>
+                <div className="text-[10px] text-[var(--text-tertiary)]">{desc}</div>
               </div>
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-center gap-4 text-xs text-[#6e7681]">
+        <div className="flex items-center justify-center gap-4 text-xs text-[var(--text-tertiary)]">
           <div className="flex items-center gap-1.5">
-            <FolderOpen size={12} className="text-[#d29922]" />
+            <FolderOpen size={12} className="text-[var(--warning)]" />
             <span>浏览项目文件</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Sparkles size={12} className="text-[#388bfd]" />
+            <Sparkles size={12} className="text-[var(--accent-primary)]" />
             <span>AI 智能生成</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Search size={12} className="text-[#8b949e]" />
+            <Search size={12} className="text-[var(--text-secondary)]" />
             <span>快速搜索</span>
           </div>
         </div>
@@ -170,12 +170,13 @@ function EmptyState() {
 }
 
 export default function CodeEditor() {
-  const { openTabs, activeTabPath, updateTabContent, showToast } = useAppStore();
+  const { openTabs, activeTabPath, updateTabContent, showToast, theme } = useAppStore();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
 
   const activeTab = openTabs.find(t => t.path === activeTabPath);
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs';
 
   async function handleSave(path: string, content: string) {
     try {
@@ -238,7 +239,7 @@ export default function CodeEditor() {
                   value={activeTab.content}
                   onChange={handleChange}
                   onMount={handleEditorMount}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                   options={{
                     fontSize: 14,
                     fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',

@@ -54,8 +54,8 @@ export default function SuggestionCards({ onSelect }: SuggestionCardsProps) {
       <div className="w-12 h-12 bg-gradient-to-br from-[#388bfd]/20 to-[#238636]/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
         <span className="text-xl">✨</span>
       </div>
-      <p className="text-center font-medium text-[#8b949e] mb-1 text-sm">向 DeepSeek AI 描述需求</p>
-      <p className="text-center text-xs text-[#6e7681] leading-relaxed mb-4">
+      <p className="text-center font-medium text-[var(--text-secondary)] mb-1 text-sm">向 DeepSeek AI 描述需求</p>
+      <p className="text-center text-xs text-[var(--text-tertiary)] leading-relaxed mb-4">
         AI 会分析项目结构并生成代码修改方案
       </p>
 
@@ -64,13 +64,13 @@ export default function SuggestionCards({ onSelect }: SuggestionCardsProps) {
           <button
             key={s.prompt}
             onClick={() => onSelect(s.prompt)}
-            className="group text-left p-2.5 bg-[#161b22] border border-[#30363d] rounded-xl hover:border-[#388bfd]/40 hover:bg-[#1c2128] transition-all duration-150"
+            className="group text-left p-2.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl hover:border-[var(--accent-border)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           >
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-base">{s.icon}</span>
-              <span className="text-xs font-semibold text-[#e6edf3] leading-tight">{s.title}</span>
+              <span className="text-xs font-semibold text-[var(--text-primary)] leading-tight">{s.title}</span>
             </div>
-            <p className="text-[11px] text-[#6e7681] leading-tight">{s.description}</p>
+            <p className="text-[11px] text-[var(--text-tertiary)] leading-tight">{s.description}</p>
           </button>
         ))}
       </div>
